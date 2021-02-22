@@ -1,7 +1,6 @@
 from datetime import datetime
 
 
-
 class TimeStamp:
 
     def __init__(self, date_as_str: str = None):

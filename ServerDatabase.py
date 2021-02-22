@@ -1,54 +1,31 @@
-import mysql.connector
+import sqlite3
+import threading
 
-
-class SingletonGovt:
-    __instance__ = None
-
-    def __init__(self):
-        """ Constructor.
-        """
-
-    @staticmethod
-    def get_instance():
-        """ Static method to fetch the current instance.
-        """
-        if not SingletonGovt.__instance__:
-            SingletonGovt()
-        return SingletonGovt.__instance__
+from Block import Block
 
 
 class ServerDatabase:
     __instance__ = None
 
-    @staticmethod
-    def get_instance(username: str = None, password: str = None):
-        """ Static method to fetch the current instance.
-        """
-        if ServerDatabase.__instance__ is None:
-            ServerDatabase(username, password)
-        return ServerDatabase.__instance__
-
-    def __init__(self, username: str, password: str):
+    def __init__(self, username: str):
         """
         :param username: username of the database
-        :param password: password of the database
         """
-        if ServerDatabase.__instance__ is None:
-            ServerDatabase.__instance__ = self
-        else:
-            raise Exception("You cannot create another ServerDatabase class because it is a singleton class")
-
         self.username = username
-        self.password = password
-        self.connect()
+        self.lock = threading.Lock()
+        self.cursor = self.connect_to_db()
 
-    def connect(self):
-        mydb = mysql.connector.connect(
-            host="localhost",
-            user=self.username,
-            password=self.password
-        )
-        self.cursor = mydb.cursor()
+    def connect_to_db(self):
+        return sqlite3.connect(f'{self.username}.db')
 
-    def create_db(self):
-        pass
+    def add_block(self, block: Block) -> None:
+        """
+
+        :param block: the block to add to the database
+        :return: None
+        """
+    # TODO
+
+
+
+

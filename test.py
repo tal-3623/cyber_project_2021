@@ -1,3 +1,11 @@
-import ServerDatabase
+from ServerDatabase import ServerDatabase
 
-print("bka")
+
+s = ServerDatabase(username='tal')
+s.connect_to_db()
+s.cursor.execute('')
+
+
+
+
+
