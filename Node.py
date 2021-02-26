@@ -1,19 +1,20 @@
+import json
 import socket
 import threading
 
 from Constants import *
 from Message import MessageBetweenNodes
+from MessageType import MessageTypeBetweenNodes
 from ServerDatabase import ServerDatabase
 
 
 class Node:
 
-    def __init__(self, username: str, pk: str, port_for_nodes: int, port_for_clients: int,
+    def __init__(self, username: str, port_for_nodes: int, port_for_clients: int,
                  node_to_connect_through=None):
 
         self.username = username
         self.server_database = ServerDatabase(username)
-        self.pk = pk
         self.lock = threading.Lock()
         self.list_of_nodes = []
         self.list_of_clients = []
@@ -37,51 +38,103 @@ class Node:
             pass
             # TODO: create a new user
 
-    def initialize(self, node_address):
+    def initialize(self, node_address) -> bool:
+        '''
+
+        :param node_address:
+        :return: is init worked
+        '''
         try:
             temp_sock = socket.socket()
             temp_sock.connect((node_address[0], node_address[1]))
 
             # TODO send newServerDataRequest
-            # TODO add all the the other nodes to list _of nodes
-            nodes_received = []
+            msg = f'{MessageTypeBetweenNodes.newServerDataRequest.value}0#'
+            temp_sock.send(msg.encode())
 
-            self.list_of_nodes.extend(nodes_received)
+            # TODO receive newServerDataTransfer
+
+            msg = MessageBetweenNodes()
+            msg.recv(temp_sock)
+            # TODO add all the the other nodes to list of nodes
+
+            nodes_address_received = json.loads(msg.content)
+
             t = threading.Thread(target=self.handle_node, args=(temp_sock, node_address,))
             t.start()
-            for node in self.list_of_nodes:
-                node_socket = node[0]
-                node_address = node[1]
-                temp_sock = socket.socket()
-                temp_sock.connect((node_address[0], node_address[1]))
-                t = threading.Thread(target=self.handle_node, args=(node_socket, node_address,))
+            for node_address in nodes_address_received:
+                ip = node_address[0]
+                port = node_address[1]
+                sock = socket.socket()
+                sock.connect((ip, port))
+                self.list_of_nodes.append((sock, node_address))
+                t = threading.Thread(target=self.handle_node, args=(sock, node_address,))
                 t.start()
             self.list_of_nodes.append((temp_sock, node_address))
 
-        except ConnectionRefusedError:
+
+        except ConnectionRefusedError or socket.timeout:
             print("the server to connect through is offline!")
-            # TODO decise what to do when the  server to connect through is offline
+            # TODO decide what to do when the  server to connect through is offline
             raise Exception("stop")
 
     def handle_client(self, client_socket: socket, address):
         pass
 
+    # ----------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------
+
+    def handle_log_off(self, content):
+        pass
+
+    def handle_new_server_data_request(self, content, sock: socket.socket,address):
+        address_list = []
+        for node in self.list_of_nodes:
+            if address == node[1]:
+                continue
+            address = node[1]
+            print(type(address))
+            address_list.append(address)
+        json_string = json.dumps(address_list)
+        msg = MessageBetweenNodes(message_type=MessageTypeBetweenNodes.newServerDataTransfer, content=json_string)
+        msg.send(sock)
+
+    def handle_get_blocks(self, content, sock: socket.socket):
+        pass
+
+    def handle_new_block(self, content):
+        pass
+
     def handle_node(self, node_socket: socket, address: tuple):
         node_socket.settimeout(SOCKET_RECEIVE_TIMEOUT)
         try:
-
             while True:
-                self.lock.acquire()
-                if self.block_to_upload is not None:
-                    pass  # TODO send block to node
-                self.lock.release()
-
                 try:
                     msg = MessageBetweenNodes()
-                    msg.build_from_str(node_socket.recv(1024).decode())
-                    # TODO handle msg
+                    msg.recv(node_socket)
+                    self.lock.acquire()
+                    if msg.message_type == MessageTypeBetweenNodes.newServerDataRequest:
+                        self.handle_new_server_data_request(msg.content, node_socket,address)
+                    elif msg.message_type == MessageTypeBetweenNodes.LogOff:
+                        self.handle_log_off(msg.content)
+                    elif msg.message_type == MessageTypeBetweenNodes.getBlocks:
+                        self.handle_get_blocks(msg.content, node_socket)
+                    elif msg.message_type == MessageTypeBetweenNodes.NewBlock:
+                        self.handle_new_block(msg.content)
+                    else:
+                        raise Exception('unexpected message')
+
+                    self.lock.release()
                 except socket.timeout:
                     pass
+
+                self.lock.acquire()
+                if self.block_to_upload is not None:
+                    pass
+                    # TODO: send new block message
+                self.lock.release()
+
         except ConnectionError as e:
             print(e)
             # remove node from list of online nodes
@@ -91,6 +144,7 @@ class Node:
 
     def run(self):
         while True:
+            print(self.list_of_nodes)
             # add a client
             try:
                 client_socket, address = self.socket_for_clients.accept()

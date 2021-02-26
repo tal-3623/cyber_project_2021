@@ -1,15 +1,25 @@
-from MessageType import MESSAGE_TYPE_BWTWEEN_NODES
+import socket
+
+from MessageType import MessageTypeBetweenNodes
 
 
 class MessageBetweenNodes:
-    def __init__(self):
-        self.type = None
-        self.content = None
-
-    def build(self, content: str, type: MESSAGE_TYPE_BWTWEEN_NODES):
-        self.type = type
+    def __init__(self, message_type: MessageTypeBetweenNodes = None, content: str = None):
+        self.message_type = message_type
         self.content = content
 
-    def build_from_str(self, s: str):
-        pass
-    # TODO
+    def recv(self, sock: socket.socket):
+        msg = ''
+        char = sock.recv(1).decode()
+        msg += char
+        while char != '#':
+            char = sock.recv(1).decode()
+            msg += char
+        msg = msg[:-1]  # remove last item -> '#'
+        self.message_type = MessageTypeBetweenNodes(int(msg[0]))
+        length = int(msg[1:])
+        self.content = sock.recv(length)
+
+    def send(self, sock: socket.socket):
+        string_to_send = f'{self.message_type.value}{len(self.content)}#{self.content}'
+        sock.send(string_to_send.encode())
