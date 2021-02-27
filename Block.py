@@ -1,8 +1,10 @@
-from utill.GneralFunctions import GeneralFunctions
+import datetime
+import hashlib
 
 
 class Block:
-    def __init__(self, index, list_of_transactions: list, list_of_new_users: list, timestamp, previous_hash):
+    def __init__(self, index, uploader_username, list_of_transactions: list, list_of_new_users: list,
+                 previous_hash, timestamp=datetime.datetime.now()):
         """
         Constructor for the `Block` class.
         :param index: Unique ID of the block.
@@ -10,23 +12,23 @@ class Block:
         :param timestamp: Time of generation of the block.
         :param previous_hash: Hash of the previous block in the chain which this block is part of.
         :param list_of_new_users: list of all the new users (username,pk, balance = 0)
+        :param uploader_username: the user name of the block owner that uploaded it
         """
-        self.index = index
+        self.index = index  # TODO : maybe delete
+        self.uploader_username = uploader_username
         self.list_of_transactions = list_of_transactions
         self.list_of_new_users = list_of_new_users
         self.timestamp = timestamp
         self.previous_hash = previous_hash
         self.proof_of_work = None
+        self.hash = None
 
-    def calculate_hash(self):
+    def hex(self) -> str:
         """
-
-        :return: the block's hash
+        :return: a string of the block as hexadecimal number
         """
-        return GeneralFunctions.double_hash(self.encode())
-
-    def as_bytes(self):
-        return str(self).encode()
+        # TODO
+        return 's'
 
     def calculate_proof_of_work(self):
         """
@@ -35,8 +37,17 @@ class Block:
         """
         # TODO
 
+
     def compute_hash(self) -> str:
         """
         :returns the hash of the block instance
         """
-        return GeneralFunctions.double_hash(self.as_bytes())
+        return hashlib.sha256(self.hex().encode()).hexdigest()
+
+    def process_block(self):
+        """
+        this function will be called every time a block has passed the threshold to be considered secure
+        then and only then the block content will be taken in to account
+        :return:
+        """
+        # TODO

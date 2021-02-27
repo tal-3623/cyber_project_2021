@@ -8,6 +8,7 @@ class MessageTypeBetweenNodes(Enum):
     getBlocks = 3
     sendBlocks = 4
     LogOff = 5
+    NewConnection = 6
 
 
 class MessageTypeBetweenNodeAndClient(Enum):
