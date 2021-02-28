@@ -37,6 +37,7 @@ class Node:
             self.initialize(node_to_connect_through)
 
         else:  # -> first node of the network
+
             pass
             # TODO: create a new user
 

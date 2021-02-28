@@ -1,27 +1,25 @@
-import hashlib
-
+from Block import Block
 from ServerDatabase import ServerDatabase
 
-s = ServerDatabase('tal')
+s = ServerDatabase('tal', True)
 s.acquire()
-parent_id = 3
-l = 5
-se = 98
-UploaderUsername = 'go'.encode().decode()
-LBH = int('LBH'.encode().hex(), base=16)
-CBH = int('CBH'.encode().hex(), base=16)
-POW = int(hashlib.sha256('POW'.encode()).hexdigest(), base=16)
-Time = '11300'
-sec = 1
+s.print_data()
+b1 = Block('tal', [], [], '')
+s.release()
 
+s.acquire()
 
+s.release()
 
-s.blockchain_table.cursor.execute(f'''SELECT *  FROM Blockchain  ''')
+s.acquire()
 
-s.blockchain_table.memory_cursor.execute(f'''SELECT *  FROM Blockchain  ''')
+s.release()
 
-print(s.blockchain_table.cursor.fetchall())
-print(s.blockchain_table.memory_cursor.fetchall())
+s.acquire()
+
+s.release()
+
+s.acquire()
 
 s.release()
 
