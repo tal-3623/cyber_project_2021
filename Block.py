@@ -1,10 +1,14 @@
 import datetime
 import hashlib
+import json
+
+from Transaction import Transaction
+from User import User
 
 
 class Block:
     def __init__(self, uploader_username: str, list_of_transactions: list, list_of_new_users: list,
-                 last_block_hash: str, timestamp=datetime.datetime.now(), current_block_hash: str = None):
+                 last_block_hash: str, timestamp: str = str(datetime.datetime.now()), current_block_hash: str = None):
         """
         Constructor for the `Block` class.
         :param index: Unique ID of the block.
@@ -46,8 +50,17 @@ class Block:
         self.security_number = security_number
 
     @staticmethod
-    def create_block_from_tuple(string: tuple):
-        id, parent_id, sequence_number, level, security_number, uploader_username, last_block_hash, proof_of_work, timestamp, list_of_transactions, list_of_new_users, current_block_hash = string
+    def create_block_from_tuple(tup: tuple):
+        id, parent_id, sequence_number, level, security_number, uploader_username, last_block_hash, current_block_hash, proof_of_work, timestamp, list_of_transactions, list_of_new_users = tup
+        list_of_new_users_as_str = json.loads(list_of_new_users)
+        list_of_transactions_as_str = json.loads(list_of_transactions)
+        list_of_new_users = []
+        list_of_transactions = []
+
+        for i in list_of_new_users_as_str:
+            list_of_new_users.append(User.create_from_str(i))
+        for i in list_of_transactions_as_str:
+            list_of_new_users.append(Transaction.create_from_str(i))
         b = Block(uploader_username, list_of_transactions, list_of_new_users, last_block_hash, timestamp,
                   current_block_hash)
         b.set_table_parameters(id, parent_id, sequence_number, level, security_number)
@@ -55,10 +68,21 @@ class Block:
 
     def as_str(self) -> str:
         """
-        :return: a string of the block as hexadecimal value
+        :return: a string of the block (only data related not table NO LBH,POW)
         """
         # TODO
-        return ''
+        list_of_new_users_as_str = []
+        list_of_transactions_as_str = []
+
+        for user in self.list_of_new_users:
+            list_of_new_users_as_str.append(user.as_str())
+
+        for tran in list_of_transactions_as_str:
+            list_of_transactions_as_str.append(tran.as_str)
+        list_of_data = [self.uploader_username, self.timestamp,
+                        json.dumps(list_of_transactions_as_str), json.dumps(list_of_new_users_as_str)]
+        json_string = json.dumps(list_of_data)
+        return json_string
 
     def calculate_proof_of_work(self):
         """
@@ -71,4 +95,5 @@ class Block:
         """
         :returns the hash of the block instance in hexadecimal
         """
-        return hashlib.sha256(self.as_str().encode()).hexdigest()
+        s = hashlib.sha256(self.as_str().encode()).hexdigest()
+        return s

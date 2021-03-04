@@ -3,6 +3,8 @@ import sqlite3
 import threading
 
 from Block import Block
+from Transaction import Transaction
+from User import User
 
 
 class ServerDatabase:
@@ -49,15 +51,22 @@ class ServerDatabase:
             # TODO
             return 5
 
-
-
         def insert_block(self, block: Block):
             """
             this function is called only after it had been confirmed that the block has a father in the blockchain
             """
             if self.current_block_id != block.id:
                 raise Exception('something ain''t right')
-            command = f'''INSERT INTO Blockchain VALUES ({block.id},{block.parent_id},{block.sequence_number},{block.level},{block.security_number},"{block.uploader_username}","{block.last_block_hash}","{block.current_block_hash}","{block.proof_of_work}","{block.timestamp}","{json.dumps(block.list_of_transactions)}","{json.dumps(block.list_of_new_users)}")'''
+
+            list_of_new_users_as_str = []
+            list_of_transactions_as_str = []
+
+            for user in block.list_of_new_users:
+                list_of_new_users_as_str.append(user.as_str())
+
+            for tran in list_of_transactions_as_str:
+                list_of_transactions_as_str.append(tran.as_str)
+            command = f'''INSERT INTO Blockchain VALUES ({block.id},{block.parent_id},{block.sequence_number},{block.level},{block.security_number},"{block.uploader_username}","{block.last_block_hash}","{block.current_block_hash}","{block.proof_of_work}","{block.timestamp}",'{json.dumps(list_of_transactions_as_str)}','{json.dumps(list_of_new_users_as_str)}')'''
             self.cursor.execute(command)
             self.memory_cursor.execute(command)
             self.current_block_id += 1
@@ -98,7 +107,7 @@ class ServerDatabase:
                     self.memory_cursor.execute(q)
                 # }
 
-                # setting the current block id {
+                # TODO: setting the current block id {
                 self.memory_cursor.execute(f'''Select * From Blockchain''')
                 max_id = self.memory_cursor.fetchall()
                 print(f'max id is {max_id}')
@@ -137,8 +146,9 @@ class ServerDatabase:
             rows = self.cursor.fetchall()
             return rows[0][0]
 
-        def add_user(self, username: str, pk, balance: int = 0):
-            s = f'''INSERT INTO {self.table_name} (Username, PublicKey, Balance) VALUES('{username}','{pk}', '{balance}');'''
+        def add_user(self, user: User):
+            s = f'''INSERT INTO {self.table_name} (Username, PublicKey, Balance) VALUES('{user.username}','{user.pk}',
+            '{user.balance}');'''
             try:
                 self.cursor.execute(s)
             except sqlite3.IntegrityError as e:
@@ -148,6 +158,22 @@ class ServerDatabase:
         def update_balance(self, username: str, new_balance):
             s = f'''UPDATE {self.table_name} SET Balance = {new_balance} WHERE Username = '{username}' '''
             self.cursor.execute(s)
+
+        def make_transaction(self,transaction:Transaction):
+            command  = f'''SELECT * FROM {self.table_name} WHERE Username  = {transaction.sender_username}'''
+            self.cursor.execute(command)
+            tup  = self.cursor.fetchall()[0]
+            sender = User(tup[0],tup[1],int(tup[2]))
+
+            command = f'''SELECT * FROM {self.table_name} WHERE Username  = {transaction.receiver_username}'''
+            self.cursor.execute(command)
+            tup = self.cursor.fetchall()[0]
+            receiver = User(tup[0], tup[1], int(tup[2]))
+
+            if sender.balance - transaction.amount<0:
+                return  #aka not enough money
+            #TODO
+
 
     def __init__(self, username: str, is_first_node: bool):  # TODO: maybe delete is first node
         """
@@ -195,18 +221,30 @@ class ServerDatabase:
         in order to solve situations that the uploader is a new user
         :return:
         """
-        # TODO
+        # add all new users{
+        for user in block.list_of_new_users:
+            self.users_table.add_user(user)
+        # }
+
+        # TODO: give reward to the block owner{
+
+        # }
+
+        # TODO: handle all transactions {
+        for transaction in block.list_of_transactions:
+            #TODO:make it
+            pass
+        # }
 
     def add_block(self, block: Block) -> None:
         """
         all the checking is using the memory table but every change is being done to both tables
-
         :param block: the block to add to the database
         :return: None
         """
         # check if the block has a father
         self.blockchain_table.memory_cursor.execute(
-            f'''SELECT * FROM Blockchain WHERE CBH = {block.last_block_hash} ''')
+            f'''SELECT * FROM Blockchain WHERE CBH = '{block.last_block_hash}' ''')
         list_of_fathers = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_fathers) == 0:  # aka block is an orphan
             pass
@@ -218,7 +256,7 @@ class ServerDatabase:
             my_id = self.blockchain_table.current_block_id
             my_parent_id = father[0]
             my_sequence_number = 0  # TODO
-            my_level = father[4]
+            my_level = father[3] + 1
             my_security_number = 0
             block.set_table_parameters(my_id, my_parent_id, my_sequence_number, my_level, my_security_number)
             self.blockchain_table.insert_block(block)
@@ -247,7 +285,7 @@ class ServerDatabase:
                         break
                     elif len(father_block_list) == 1:
                         father_block = Block.create_block_from_tuple(father_block_list[0])
-                        self.blockchain_table.increase_block_security_number(father_block)
+                        self.blockchain_table.increase_block_security_number(father_block.id)
                         current_block = father_block
                     else:
                         raise Exception('block has an unexpected amount of fathers')
@@ -258,13 +296,22 @@ class ServerDatabase:
                 command = f'''SELECT * FROM Blockchain WHERE SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()} '''
                 self.blockchain_table.memory_cursor.execute(command)
                 list_of_blocks_that_need_to_be_processed = self.blockchain_table.memory_cursor.fetchall()
-                if len(list_of_blocks_that_need_to_be_processed) != 1:
+                len_of_list_of_blocks_that_need_to_be_processed = len(list_of_blocks_that_need_to_be_processed)
+                if len_of_list_of_blocks_that_need_to_be_processed == 0:
+                    pass
+                elif len_of_list_of_blocks_that_need_to_be_processed == 1:
+                    block_to_process = Block.create_block_from_tuple(list_of_blocks_that_need_to_be_processed[0])
+                    self.process_block(block_to_process)
+                    # remove blocks that  became irrelevant
+                    command = f'''SELECT * FROM Blockchain WHERE Level <= {block_to_process.level} '''
+                    self.blockchain_table.memory_cursor.execute(command)
+                    l = self.blockchain_table.memory_cursor.fetchall()
+                    for i in l:
+                        print(f"deleting block {i[5]}")
+                    command = f'''DELETE FROM Blockchain WHERE Level <= {block_to_process.level} '''
+                    self.blockchain_table.memory_cursor.execute(command)
+                else:
                     raise Exception('more then one block has passed the threshold')
-                block_to_process = Block.create_block_from_tuple(list_of_blocks_that_need_to_be_processed[0])
-                self.process_block(block_to_process)
-                # remove blocks that  became irrelevant
-                command = f'''DELETE FROM Blockchain WHERE Level <= {block_to_process.level} '''
-                self.blockchain_table.memory_cursor.execute(command)
                 # }
             elif len(list_of_brothers) > 1:  # aka i am not the first son
                 pass  # TODO: see if updating the SequenceNumber is relevant

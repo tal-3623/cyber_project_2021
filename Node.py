@@ -1,3 +1,4 @@
+import hashlib
 import json
 import socket
 import threading
@@ -93,6 +94,19 @@ class Node:
     # ----------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------
+    def proof_of_work(self, block_as_str: str, difficulty_bits):
+
+        target = 2 ** (256 - difficulty_bits)
+        for nonce in range(MAX_NONCE):
+            hash_result = hashlib.sha256(block_as_str + str(nonce)).hexdigest()
+
+            if int(hash_result, 16) < target:
+                print(f"Success with nonce {nonce}")
+                print(f"Hash is {hash_result}")
+                return hash_result, nonce
+
+        print("Failed after %d (max_nonce) tries" % nonce)
+        return nonce
 
     def handle_log_off(self, content):
         pass
