@@ -8,22 +8,6 @@ from User import User
 
 
 class ServerDatabase:
-    class NodesAddressTable:
-        """
-        the NodesAddressTable consist of a table that has two parameters
-        ip|port
-        """
-
-        def __init__(self, database_cursor: sqlite3.Cursor, connection: sqlite3.Connection):
-            self.connection = connection
-            self.cursor = database_cursor
-            self.table_name = 'NodesAddressTable'
-            self.create_table()
-
-        def create_table(self):
-            self.cursor.execute(
-                f'''CREATE TABLE IF NOT EXISTS {self.table_name} (IP varchar(20) UNIQUE,PORT int);''')
-
     class BlockchainTable:
         """
         the Blockchain table consist of a table that has 12 parameters
@@ -64,8 +48,8 @@ class ServerDatabase:
             for user in block.list_of_new_users:
                 list_of_new_users_as_str.append(user.as_str())
 
-            for tran in list_of_transactions_as_str:
-                list_of_transactions_as_str.append(tran.as_str)
+            for tran in block.list_of_transactions:
+                list_of_transactions_as_str.append(tran.as_str())
             command = f'''INSERT INTO Blockchain VALUES ({block.id},{block.parent_id},{block.sequence_number},{block.level},{block.security_number},"{block.uploader_username}","{block.last_block_hash}","{block.current_block_hash}","{block.proof_of_work}","{block.timestamp}",'{json.dumps(list_of_transactions_as_str)}','{json.dumps(list_of_new_users_as_str)}')'''
             self.cursor.execute(command)
             self.memory_cursor.execute(command)
@@ -159,21 +143,27 @@ class ServerDatabase:
             s = f'''UPDATE {self.table_name} SET Balance = {new_balance} WHERE Username = '{username}' '''
             self.cursor.execute(s)
 
-        def make_transaction(self,transaction:Transaction):
-            command  = f'''SELECT * FROM {self.table_name} WHERE Username  = {transaction.sender_username}'''
+        def make_transaction(self, transaction: Transaction):
+            command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{transaction.sender_username}' '''
             self.cursor.execute(command)
-            tup  = self.cursor.fetchall()[0]
-            sender = User(tup[0],tup[1],int(tup[2]))
+            tup = self.cursor.fetchall()[0]
+            sender = User(tup[0], tup[1], int(tup[2]))
 
-            command = f'''SELECT * FROM {self.table_name} WHERE Username  = {transaction.receiver_username}'''
+            command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{transaction.receiver_username}' '''
             self.cursor.execute(command)
             tup = self.cursor.fetchall()[0]
             receiver = User(tup[0], tup[1], int(tup[2]))
 
-            if sender.balance - transaction.amount<0:
-                return  #aka not enough money
-            #TODO
+            if sender.balance - transaction.amount < 0:
+                return  # aka not enough money
 
+            # TODO: check digital singature of both users{
+            #  }
+
+            # changing the users balance{
+            self.update_balance(sender.username, sender.balance - transaction.amount)
+            self.update_balance(receiver.username, receiver.balance + transaction.amount)
+            # }
 
     def __init__(self, username: str, is_first_node: bool):  # TODO: maybe delete is first node
         """
@@ -187,6 +177,7 @@ class ServerDatabase:
         self.users_table = self.UsersTable(self.__cursor, self.__connection)
         self.blockchain_table = self.BlockchainTable(self.__cursor, self.__connection, self.__memory_cursor,
                                                      self.__memory_connection)
+        self.reward_for_block = 2  # TODO: currntly a temp value need to calculacte
 
     def connect_to_db(self):
         return sqlite3.connect(f'{self.username}.db'), sqlite3.connect(':memory:')
@@ -221,19 +212,22 @@ class ServerDatabase:
         in order to solve situations that the uploader is a new user
         :return:
         """
-        # add all new users{
+        if block.uploader_username == 'genesis':
+            return
+            # add all new users{
         for user in block.list_of_new_users:
             self.users_table.add_user(user)
         # }
 
         # TODO: give reward to the block owner{
 
+        current_balance = self.users_table.get_balance(block.uploader_username)
+        self.users_table.update_balance(block.uploader_username, current_balance + self.reward_for_block)
         # }
 
         # TODO: handle all transactions {
         for transaction in block.list_of_transactions:
-            #TODO:make it
-            pass
+            self.users_table.make_transaction(transaction)
         # }
 
     def add_block(self, block: Block) -> None:

@@ -59,8 +59,11 @@ class Block:
 
         for i in list_of_new_users_as_str:
             list_of_new_users.append(User.create_from_str(i))
+
         for i in list_of_transactions_as_str:
-            list_of_new_users.append(Transaction.create_from_str(i))
+            t = Transaction.create_from_str(i)
+            t.to_string()
+            list_of_transactions.append(t)
         b = Block(uploader_username, list_of_transactions, list_of_new_users, last_block_hash, timestamp,
                   current_block_hash)
         b.set_table_parameters(id, parent_id, sequence_number, level, security_number)
@@ -77,8 +80,9 @@ class Block:
         for user in self.list_of_new_users:
             list_of_new_users_as_str.append(user.as_str())
 
-        for tran in list_of_transactions_as_str:
-            list_of_transactions_as_str.append(tran.as_str)
+        for tran in self.list_of_transactions:
+            list_of_transactions_as_str.append(tran.as_str())
+
         list_of_data = [self.uploader_username, self.timestamp,
                         json.dumps(list_of_transactions_as_str), json.dumps(list_of_new_users_as_str)]
         json_string = json.dumps(list_of_data)

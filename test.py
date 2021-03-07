@@ -3,6 +3,7 @@ import hashlib
 from Block import Block
 from Constants import MAX_NONCE
 from ServerDatabase import ServerDatabase
+from Transaction import Transaction
 from User import User
 
 
@@ -33,58 +34,62 @@ def create_new_block(username, LOT, LONW, LB: Block):
 s = ServerDatabase('tal', True)
 
 s.acquire()
+b = create_new_block('name1', [], [User('name1','fdsf'),User('tal', 'fd4ab'), User('Ofek', '32')], genesis_block)
+s.add_block(b)
 s.print_data()
-b = create_new_block('name1', [], [User('name1', 'fd4ab')], genesis_block)
+s.release()
+
+s.acquire()
+
+b = create_new_block('name2', [Transaction('name1', 'Ofek', 1.2, 'becaue im a goat')], [User('name2', '123')], b)
+s.add_block(b)
+s.print_data()
+s.release()
+
+s.acquire()
+
+b = create_new_block('name3', [], [User('name3', '12r3')], b)
+s.add_block(b)
+s.print_data()
+s.release()
+
+s.acquire()
+
+b = create_new_block('name4', [], [User('name4', '12433')], b)
+s.add_block(b)
+s.print_data()
+s.release()
+
+s.acquire()
+
+b = create_new_block('name5', [], [User('name5', '1235')], b)
+s.add_block(b)
+s.print_data()
+s.release()
+
+s.acquire()
+
+b = create_new_block('name6', [], [User('name6', '1236')], b)
+s.add_block(b)
+s.print_data()
+s.release()
+
+s.acquire()
+b = create_new_block('name7', [], [User('name7', '127')], b)
+s.add_block(b)
+s.print_data()
+s.release()
+
+s.acquire()
+
+b = create_new_block('name8', [], [User('name8', '1238')], b)
 s.add_block(b)
 s.print_data()
 s.release()
 
 s.acquire()
 s.print_data()
-b = create_new_block('name2', [], [], b)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-s.print_data()
-b = create_new_block('name3', [], [], b)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-s.print_data()
-b = create_new_block('name4', [], [], b)
-name4 = b
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-s.print_data()
-b = create_new_block('name5', [], [], b)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-s.print_data()
-b = create_new_block('name6', [], [], b)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-s.print_data()
-b = create_new_block('name7', [], [], name4)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-s.print_data()
-b = create_new_block('name8', [], [], b)
+b = create_new_block('name9', [], [User('name9', '129')], b)
 s.add_block(b)
 s.print_data()
 s.release()
