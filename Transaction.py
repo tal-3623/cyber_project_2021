@@ -29,7 +29,6 @@ class Transaction:
     def create_from_str(string: str):
         sender_username, receiver_username, amount, description, timestamp, sender_signature, receiver_signature = json.loads(
             string)
-        print(f'----> {json.loads(string)}')
         return Transaction(sender_username, receiver_username, amount, description, timestamp, sender_signature,
                            receiver_signature)
 

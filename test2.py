@@ -14,9 +14,10 @@ def proof_of_work(block_as_str: str, difficulty_bits: int):
         hash_result = hashlib.sha256(input_to_hash.encode()).hexdigest()
 
         if int(hash_result, 16) < target:
+            print(f'\nhash result {hash_result}\n input to hash {input_to_hash}\n')
             return nonce
 
-    return nonce
+    Exception('did not found')
 
 
 genesis_block = Block('genesis', [], [], '', '')
@@ -29,50 +30,64 @@ def create_new_block(username, LOT, LONW, LB: Block):
     return b1
 
 
-s = ServerDatabase('tal', True)
+s = ServerDatabase('tal', False)
+s.blockchain_table.cursor.execute(f'''Select MAX(ID) From Blockchain''')
+max_id_list = s.blockchain_table.cursor.fetchall()
+if len(max_id_list) != 1:
+    raise Exception("duplicate max id")
+max_id = max_id_list[0][0]
+s.blockchain_table.cursor.execute(f'''SELECT * FROM Blockchain WHERE ID = {max_id};''')
+a = s.blockchain_table.cursor.fetchall()
+last_block = Block.create_block_from_tuple(a[0])
 
 s.acquire()
-b = create_new_block('name1', [], [User('name1', 'fdsf'), User('tal', 'fd4ab'), User('Ofek', '32')], genesis_block)
+b = create_new_block('name6', [Transaction('Ofek', 'name1', 1.5, '')], [User('name6', '1236')], last_block)
+
+t = b
+# print(s.add_block(b))
+s.print_data()
+s.release()
+
+s.acquire()
+b = create_new_block('name7', [], [User('name7', '127')], b)
+print(s.add_block(b))
+s.print_data()
+s.release()
+
+
+
+s.acquire()
+b = create_new_block('name8', [], [User('name8', '1238')], b)
 s.add_block(b)
 s.print_data()
 s.release()
 
 s.acquire()
-
-b = create_new_block('name2', [Transaction('name1', 'Ofek', 1.2, 'becaue im a goat')], [User('name2', '123')], b)
+b = create_new_block('name9', [], [User('name9', '129')], b)
 s.add_block(b)
 s.print_data()
-s.release()
 
-s.acquire()
+print(s.add_block(t))
 
-b = create_new_block('name3', [], [User('name3', '12r3')], b)
-s.add_block(b)
 s.print_data()
+
 s.release()
 
-s.acquire()
-b = create_new_block('name1', [], [User('name4', '12433')], b)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-b = create_new_block('name5', [], [User('name5', '1235')], b)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-b = create_new_block('name6', [], [User('name6', '12345')], b)
-s.add_block(b)
-s.print_data()
-s.release()
-
-s.acquire()
-b = create_new_block('name7', [], [User('name7', '12355')], b)
-s.add_block(b)
-s.print_data()
-s.release()
 
 s.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

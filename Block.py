@@ -62,7 +62,6 @@ class Block:
 
         for i in list_of_transactions_as_str:
             t = Transaction.create_from_str(i)
-            t.to_string()
             list_of_transactions.append(t)
         b = Block(uploader_username, list_of_transactions, list_of_new_users, last_block_hash, timestamp,
                   current_block_hash)
