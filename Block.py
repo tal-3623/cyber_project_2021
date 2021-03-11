@@ -50,6 +50,19 @@ class Block:
         self.security_number = security_number
 
     @staticmethod
+    def create_block_from_tuple_received(tup):
+        uploader_username, timestamp, list_of_transactions_as_str, list_of_new_users_as_str, pow,last_block_hash = tup
+        list_of_new_users_as_str = json.loads(list_of_new_users_as_str)
+        list_of_transactions_as_str = json.loads(list_of_transactions_as_str)
+        list_of_new_users = [User.create_from_str(user_as_str) for user_as_str in list_of_new_users_as_str]
+        list_of_transactions = [Transaction.create_from_str(block_as_str) for block_as_str in
+                                list_of_transactions_as_str]
+        b = Block(uploader_username, list_of_transactions, list_of_new_users,last_block_hash,timestamp=timestamp)
+        b.proof_of_work = pow
+        return b
+
+
+    @staticmethod
     def create_block_from_tuple(tup: tuple):
         id, parent_id, sequence_number, level, security_number, uploader_username, last_block_hash, current_block_hash, proof_of_work, timestamp, list_of_transactions, list_of_new_users = tup
         list_of_new_users_as_str = json.loads(list_of_new_users)
@@ -84,6 +97,16 @@ class Block:
 
         list_of_data = [self.uploader_username, self.timestamp,
                         json.dumps(list_of_transactions_as_str), json.dumps(list_of_new_users_as_str)]
+        json_string = json.dumps(list_of_data)
+        return json_string
+
+    def as_str_to_send(self) -> str:
+        list_of_new_users_as_str = [user.as_str() for user in self.list_of_new_users]
+        list_of_transactions_as_str = [tran.as_str() for tran in self.list_of_transactions]
+
+        list_of_data = [self.uploader_username, self.timestamp,
+                        json.dumps(list_of_transactions_as_str), json.dumps(list_of_new_users_as_str),
+                        self.proof_of_work, self.last_block_hash]
         json_string = json.dumps(list_of_data)
         return json_string
 

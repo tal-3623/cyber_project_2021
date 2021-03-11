@@ -15,7 +15,7 @@ class ServerDatabase:
             self.__cursor = database_cursor
             self.__connection = connection
             self.__table_name = 'GeneralVariables'
-            self.__last_level_processed = None
+            self.__last_level_processed = 0
             self.__create_table()
 
         def __create_table(self):
@@ -100,12 +100,6 @@ class ServerDatabase:
             list_of_new_users_as_str = [user.as_str() for user in block.list_of_new_users]
             list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
 
-            # TODO: delete
-            # for user in block.list_of_new_users:
-            #     list_of_new_users_as_str.append(user.as_str())
-            # for tran in block.list_of_transactions:
-            #     list_of_transactions_as_str.append(tran.as_str())
-
             command = f'''INSERT INTO Blockchain VALUES ({block.id},{block.parent_id},{block.sequence_number},{block.level},{block.security_number},"{block.uploader_username}","{block.last_block_hash}","{block.current_block_hash}","{block.proof_of_work}","{block.timestamp}",'{json.dumps(list_of_transactions_as_str)}','{json.dumps(list_of_new_users_as_str)}')'''
             self.cursor.execute(command)
             self.memory_cursor.execute(command)
@@ -118,6 +112,17 @@ class ServerDatabase:
             command = f'''UPDATE Blockchain SET SecurityNumber = SecurityNumber + 1 WHERE ID = {blocks_id} '''
             self.cursor.execute(command)
             self.memory_cursor.execute(command)
+
+        def get_father(self, child: Block):
+            self.memory_cursor.execute(
+                f'''SELECT * FROM Blockchain WHERE CBH = '{child.last_block_hash}' ''')
+            list_of_fathers = self.memory_cursor.fetchall()
+            if list_of_fathers != 1:
+                return None
+
+            father = list_of_fathers[0]
+            father = Block.create_block_from_tuple(father)
+            return father
 
         def create_genesis_block(self):
             genesis_block = Block('genesis', [], [], '', '')
@@ -139,7 +144,7 @@ class ServerDatabase:
 
                 # copying the table that already exist to  a table o memory{
                 self.memory_cursor.execute(create_table_command)
-                q = f'''SELECT * FROM Blockchain WHERE Level > {self.general_val_table.get_last_level_processed()}'''
+                q = f'''SELECT * FROM Blockchain WHERE Level >= {self.general_val_table.get_last_level_processed()}'''
                 self.cursor.execute(q)
                 list_of_all_blocks_to_memory_as_tup = self.cursor.fetchall()
                 list_of_all_blocks_to_memory_block = [Block.create_block_from_tuple(x) for x in
@@ -330,6 +335,15 @@ class ServerDatabase:
 
         # }
 
+        # check if block is duplicated{
+        self.blockchain_table.memory_cursor.execute(
+            f'''SELECT * FROM Blockchain WHERE CBH = '{block.current_block_hash}' ''')
+        list_of_blocks_with_same_hash = self.blockchain_table.memory_cursor.fetchall()
+        if len(list_of_blocks_with_same_hash) != 0:
+            print('dup block')
+            return AddBlockStatus.INVALID_BLOCK  # duplicated block
+        # }
+
         # check if the block has a father
         self.blockchain_table.memory_cursor.execute(
             f'''SELECT * FROM Blockchain WHERE CBH = '{block.last_block_hash}' ''')
@@ -362,8 +376,10 @@ class ServerDatabase:
             self.blockchain_table.insert_block(block)
             # }
 
-            # {
+            # {'
+            print(f'cbl {block.level}, {self.blockchain_table.block_to_calc_proof_of_work.level}')
             if block.level > self.blockchain_table.block_to_calc_proof_of_work.level:
+                print('here')
                 self.blockchain_table.block_to_calc_proof_of_work = block
             # }
 
@@ -429,5 +445,6 @@ class ServerDatabase:
                 if orphan_block.last_block_hash == block.current_block_hash:
                     self.blockchain_table.orphans_list.remove(orphan_block)
                     self.add_block(orphan_block)
+            return AddBlockStatus.SUCCESSFUL
         else:
             raise Exception('block has an unexpected amount of fathers')

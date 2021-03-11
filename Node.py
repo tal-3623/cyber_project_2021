@@ -26,10 +26,8 @@ class Node:
         self.list_of_transactions_to_make = []
         self.list_of_new_users_to_upload = []
         self.block_to_upload = None
-        self.block_to_calc_proof_of_work = None
-        self.proof_of_work_difficulty = 15 #TODO: clac, currently temp
-        self.block_to_add = None
-        self.last_block_added = None
+        # self.block_to_calc_proof_of_work = self.server_database.blockchain_table.block_to_calc_proof_of_work
+        self.proof_of_work_difficulty = 15  # TODO: clac, currently temp
         self.__port_for_nodes = port_for_nodes
         self.__port_for_clients = port_for_clients
 
@@ -51,7 +49,7 @@ class Node:
             # TODO: create a new user
 
         if not self.server_database.users_table.is_user_exist(user.username):
-            self.list_of_new_users_to_upload.append(User)
+            self.list_of_new_users_to_upload.append(user)
 
     def acquire(self):
         self.__lock.acquire()
@@ -138,18 +136,28 @@ class Node:
         msg.send(sock)
         return address
 
-    def handle_get_blocks(self, content, sock: socket.socket):
-        pass  # TODO
+    def handle_get_blocks(self, content, socket: socket.socket):
+        print(f'in get blocks')
+        block_received = Block.create_block_from_tuple_received(json.loads(content))
+        father = self.server_database.blockchain_table.get_father(block_received)
+        if father is not None:
+            content = father.as_str()
+            msg = MessageBetweenNodes(MessageTypeBetweenNodes.NewBlock, content)
+            msg.send(socket)
 
-    def handle_new_block(self, content: str):
+    def handle_new_block(self, content: str, socket: socket.socket):
+        print('in handle_new_block')
         new_block_as_tup = json.loads(content)
-        new_block = Block.create_block_from_tuple(new_block_as_tup)
+        new_block = Block.create_block_from_tuple_received(new_block_as_tup)
+        print(new_block.timestamp)
         add_block_result = self.server_database.add_block(new_block)
         print(f'{add_block_result.name}')
         if add_block_result == AddBlockStatus.INVALID_BLOCK:
             pass
         elif add_block_result == AddBlockStatus.ORPHAN_BLOCK:
-            pass  # TODO send get blocks
+            content = new_block.as_str_to_send()
+            msg = MessageBetweenNodes(MessageTypeBetweenNodes.getBlocks, content)  # TODO send get blocks
+            msg.send(socket)
         else:
             pass
 
@@ -177,7 +185,7 @@ class Node:
                     elif msg.message_type == MessageTypeBetweenNodes.getBlocks:
                         self.handle_get_blocks(msg.content, node_socket)  # TODO get blocks
                     elif msg.message_type == MessageTypeBetweenNodes.NewBlock:
-                        self.handle_new_block(msg.content)  # TODO: new block
+                        self.handle_new_block(msg.content, node_socket)  # TODO: new block
                     elif msg.message_type == MessageTypeBetweenNodes.NewConnection:
                         address = self.handle_new_connection(msg.content, address)
                     else:
@@ -188,12 +196,17 @@ class Node:
                     pass
 
                 self.acquire()
-                if last_block_uploaded != self.block_to_upload and last_block_uploaded is not None:
-                    content = self.block_to_upload.as_str()
-                    msg_to_send = MessageBetweenNodes(MessageTypeBetweenNodes.NewBlock, content)
-                    msg_to_send.send(node_socket)
-                    # TODO: send new block message
-                    last_block_uploaded = self.block_to_upload
+                if self.block_to_upload is not None:
+                    result = self.server_database.add_block(self.block_to_upload)
+                    if result == AddBlockStatus.INVALID_BLOCK:
+                        pass
+                    else:
+                        print(f'uploading block {self.block_to_upload.as_str()}')
+                        content = self.block_to_upload.as_str_to_send()
+                        msg_to_send = MessageBetweenNodes(MessageTypeBetweenNodes.NewBlock, content)
+                        msg_to_send.send(node_socket)
+                        # TODO: send new block message
+                        self.block_to_upload = None
                 self.release()
 
         except ConnectionError as e:
@@ -204,15 +217,15 @@ class Node:
 
     def find_proof_of_work(self):
         self.acquire()
-        block = self.block_to_calc_proof_of_work
+        block = self.server_database.blockchain_table.block_to_calc_proof_of_work
         self.release()
         while True:
             target = 2 ** (256 - self.proof_of_work_difficulty)
             for nonce in range(MAX_NONCE):
                 if nonce % PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY == 0:
                     self.acquire()
-                    if block != self.block_to_calc_proof_of_work:
-                        block = self.block_to_calc_proof_of_work.as_str()
+                    if block != self.server_database.blockchain_table.block_to_calc_proof_of_work:
+                        block = self.server_database.blockchain_table.block_to_calc_proof_of_work
                         self.release()
                         break
                     self.release()
@@ -220,16 +233,13 @@ class Node:
                 hash_result = hashlib.sha256(input_to_hash.encode()).hexdigest()
 
                 if int(hash_result, 16) < target:
-                    print(f'\nhash result {hash_result}\n input to hash {input_to_hash}\n')
+                    print(f'succsess with nonce {nonce}')
                     self.acquire()
                     # build block to upload {
                     list_of_transactions_to_make = self.list_of_transactions_to_make[
                                                    :max(len(self.list_of_transactions_to_make),
                                                         MAX_LEN_OF_LIST_OF_TRANSACTIONS)]
-                    list_of_new_users_to_upload = self.list_of_new_users_to_upload[:
-                                                                                   max(len(
-                                                                                       self.list_of_new_users_to_upload),
-                                                                                       MAX_LEN_OF_LIST_OF_NEW_USERS)]
+                    list_of_new_users_to_upload = self.list_of_new_users_to_upload
                     last_block_hash = block.current_block_hash
                     self.block_to_upload = Block(self.username, list_of_transactions_to_make,
                                                  list_of_new_users_to_upload,
