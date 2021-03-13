@@ -80,7 +80,7 @@ class ServerDatabase:
 
         def calculate_security_number_threshold(self) -> int:
             # TODO
-            return 15
+            return 20
 
         def __insert_block_just_to_memory(self, block: Block):
             """used only in create table func """
@@ -301,7 +301,6 @@ class ServerDatabase:
         result_users = self.__cursor.fetchall()
         print(f'result {result}\nresult_memory {result_memory}\nresult_users {result_users}')
 
-
     def process_block(self, block: Block, node):
         """
         this function will be called every time a block has passed the threshold to be considered secure
@@ -336,8 +335,8 @@ class ServerDatabase:
         if block.uploader_username == self.username:  # aka i am the one yo upload the block
             if not node.is_user_been_processed and node.user.as_str() in list_of_new_users_as_str:
                 node.is_user_been_processed = True
-        #    print(
-         #       f'before pro \nnu {node.list_of_new_users_to_upload}\nnuw {node.list_of_new_users_to_upload_waiting_to_be_processed}\nt {node.list_of_transactions_to_make}\n tw {node.list_of_transactions_to_make_waiting_to_be_processed}')
+            #    print(
+            #       f'before pro \nnu {node.list_of_new_users_to_upload}\nnuw {node.list_of_new_users_to_upload_waiting_to_be_processed}\nt {node.list_of_transactions_to_make}\n tw {node.list_of_transactions_to_make_waiting_to_be_processed}')
             node.list_of_new_users_to_upload_waiting_to_be_processed = [user for user in
                                                                         node.list_of_new_users_to_upload_waiting_to_be_processed
                                                                         if
@@ -348,8 +347,8 @@ class ServerDatabase:
                                                                          if
                                                                          tran.as_str() not in list_of_transactions_as_str]
 
-           # print(
-            #    f'after pro \nnu {node.list_of_new_users_to_upload}\nnuw {node.list_of_new_users_to_upload_waiting_to_be_processed}\nt {node.list_of_transactions_to_make}\n tw {node.list_of_transactions_to_make_waiting_to_be_processed}')
+        # print(
+        #    f'after pro \nnu {node.list_of_new_users_to_upload}\nnuw {node.list_of_new_users_to_upload_waiting_to_be_processed}\nt {node.list_of_transactions_to_make}\n tw {node.list_of_transactions_to_make_waiting_to_be_processed}')
 
     def add_block(self, block: Block, node) -> AddBlockStatus:
         """
@@ -372,9 +371,8 @@ class ServerDatabase:
         list_of_blocks_with_same_hash = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_blocks_with_same_hash) != 0:
             self.print_data()
-            print(
-                f'-------\n{block.current_block_hash}\n{block.last_block_hash}\n{len(list_of_blocks_with_same_hash)}\n--------------------')
-            print('dup block')
+            print(f'-------\n{block.current_block_hash}\n{block.last_block_hash}\n{len(list_of_blocks_with_same_hash)}\n--------------------')
+            print(f'dup block: {block.as_str()}')
             return AddBlockStatus.INVALID_BLOCK  # duplicated block
         # }
 
@@ -383,19 +381,20 @@ class ServerDatabase:
             f'''SELECT * FROM Blockchain WHERE CBH = '{block.last_block_hash}' ''')
         list_of_fathers = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_fathers) == 0:  # aka block is an orphan
-            #if didn't found a father in memory table then check if in full table on disk
+            # if didn't found a father in memory table then check if in full table on disk
             self.blockchain_table.cursor.execute(
                 f'''SELECT * FROM Blockchain WHERE CBH = '{block.last_block_hash}' ''')
-            list_of_fathers = self.blockchain_table.memory_cursor.fetchall()
-            if len(list_of_fathers) == 0:
+            list_of_fathers_on_disk = self.blockchain_table.cursor.fetchall()
+            # if block's father is not on memory then he could be an orphan or he is in disk which meens to ingore it
+            if len(list_of_fathers_on_disk) == 0:  # aka real orphan
                 self.blockchain_table.orphans_list.append(block)
                 print('orphan')
                 return AddBlockStatus.ORPHAN_BLOCK
-            elif len(list_of_fathers)==1:
-                pass
+            elif len(list_of_fathers_on_disk) == 1:
+                print('his level allready have been procall ready ')
+                return AddBlockStatus.INVALID_BLOCK
             else:
                 raise Exception('two much fathers')
-
 
         elif len(list_of_fathers) == 1:  # aka found a father
             father = list_of_fathers[0]
@@ -418,6 +417,7 @@ class ServerDatabase:
             my_security_number = 0
             block.set_table_parameters(my_id, my_parent_id, my_sequence_number, my_level, my_security_number)
             self.blockchain_table.insert_block(block)
+            block_that_was_inserted = block
             # }
 
             # {'
@@ -504,7 +504,8 @@ class ServerDatabase:
 
             # check the orphan list
             for orphan_block in self.blockchain_table.orphans_list:
-                if orphan_block.last_block_hash == block.current_block_hash:
+                if orphan_block.last_block_hash == block_that_was_inserted.current_block_hash:
+                    print(f'orphan was found {orphan_block.as_str()}')
                     self.blockchain_table.orphans_list.remove(orphan_block)
                     self.add_block(orphan_block, node)
             return AddBlockStatus.SUCCESSFUL

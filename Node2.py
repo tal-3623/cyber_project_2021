@@ -2,6 +2,7 @@ import hashlib
 import json
 import socket
 import threading
+import time
 
 from AddBlockStatus import AddBlockStatus
 from Block import Block
@@ -177,6 +178,7 @@ class Node:
         address = (ip_of_other_node, port_of_other_node)
         if address not in self.list_of_nodes_address:
             self.list_of_nodes_address.append(address)
+        return address
 
     def handle_node(self, node_socket: socket.socket, address: tuple):
         node_socket.settimeout(SOCKET_RECEIVE_TIMEOUT)
@@ -196,7 +198,7 @@ class Node:
                     elif msg.message_type == MessageTypeBetweenNodes.NewBlock:
                         self.handle_new_block(msg.content, node_socket)  # TODO: new block
                     elif msg.message_type == MessageTypeBetweenNodes.NewConnection:
-                        self.handle_new_connection(msg.content, address)
+                        address = self.handle_new_connection(msg.content, address)
                     else:
                         raise Exception('unexpected message')
                     self.release()
@@ -206,6 +208,8 @@ class Node:
         except ConnectionError as e:
             # raise e
             # remove node from list of online nodes
+            print(f' self.list_of_nodes_address { self.list_of_nodes_address}')
+            print(f'adress {address}')
             self.list_of_nodes_address.remove(address)
             self.list_of_nodes_sockets.remove(node_socket)
             self.release()
@@ -217,11 +221,10 @@ class Node:
         self.release()
         while True:
 
-            # testing {
-            self.acquire()
-            self.server_database.print_data()
-            self.release()
-            # }
+            # # testing {
+            # self.acquire()
+            # self.release()
+            # # }
 
             print('in start of while true')
             target = 2 ** (256 - proof_of_work_difficulty)
@@ -289,7 +292,6 @@ class Node:
                                 msg_to_send.send(sock)
                             except Exception as e:
                                 print(e)
-                                raise e
                             # TODO: send new block message
                     self.block_to_upload = None
                     self.release()
