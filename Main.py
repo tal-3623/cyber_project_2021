@@ -1,11 +1,12 @@
 from Node2 import Node
+from Transaction import Transaction
 from User import User
 
 
 def l(names: list) -> list:
     a = []
     for i in range(len(names), len(names) * 2):
-        a.append(User(names[i-len(names)], str(i + 3)))
+        a.append(User(names[i - len(names)], str(i + 3)))
     return a
 
 
@@ -14,6 +15,7 @@ def main():
     a = l(['aa', "bb", "cc", "dd"])
     node.acquire()
     node.list_of_new_users_to_upload.extend(a)
+    node.list_of_transactions_to_make.extend([Transaction('Main1', 'aa', 723.723, 'for test')])
     node.release()
     node.run()
 

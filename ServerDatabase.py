@@ -269,7 +269,7 @@ class ServerDatabase:
                                                      self.__memory_connection, self.general_val_table)
 
         self.reward_for_block = 2  # TODO: currntly a temp value need to calculacte
-        self.proof_of_work_difficulty = 18  # TODO: currntly a temp value need to calculacte
+        self.proof_of_work_difficulty = 15  # TODO: currntly a temp value need to calculacte
         self.pow_target = 12  # TODO: currntly a temp value need to calculacte
 
     def connect_to_db(self):
@@ -371,7 +371,8 @@ class ServerDatabase:
         list_of_blocks_with_same_hash = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_blocks_with_same_hash) != 0:
             self.print_data()
-            print(f'-------\n{block.current_block_hash}\n{block.last_block_hash}\n{len(list_of_blocks_with_same_hash)}\n--------------------')
+            print(
+                f'-------\n{block.current_block_hash}\n{block.last_block_hash}\n{len(list_of_blocks_with_same_hash)}\n--------------------')
             print(f'dup block: {block.as_str()}')
             return AddBlockStatus.INVALID_BLOCK  # duplicated block
         # }

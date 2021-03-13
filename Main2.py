@@ -1,6 +1,7 @@
 import random
 
 from Node2 import Node
+from Transaction import Transaction
 from User import User
 
 
@@ -17,6 +18,7 @@ def main():
     a = l(['tal', "ofek", "moshe", "mamas"])
     node2.acquire()
     node2.list_of_new_users_to_upload.extend(a)
+    node2.list_of_transactions_to_make.extend([Transaction('Main2','tal',333.9,'bummbele')])
     node2.release()
     node2.run()
 
