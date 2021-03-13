@@ -80,7 +80,7 @@ class ServerDatabase:
 
         def calculate_security_number_threshold(self) -> int:
             # TODO
-            return 5
+            return 15
 
         def __insert_block_just_to_memory(self, block: Block):
             """used only in create table func """
@@ -114,10 +114,12 @@ class ServerDatabase:
             self.memory_cursor.execute(command)
 
         def get_father(self, child: Block):
-            self.memory_cursor.execute(
+            self.cursor.execute(
                 f'''SELECT * FROM Blockchain WHERE CBH = '{child.last_block_hash}' ''')
-            list_of_fathers = self.memory_cursor.fetchall()
-            if list_of_fathers != 1:
+            list_of_fathers = self.cursor.fetchall()
+            print(len(list_of_fathers))
+            if len(list_of_fathers) != 1:
+                print(f'child_hash {child.current_block_hash} , fatther {child.last_block_hash}')
                 return None
 
             father = list_of_fathers[0]
@@ -144,7 +146,7 @@ class ServerDatabase:
 
                 # copying the table that already exist to  a table o memory{
                 self.memory_cursor.execute(create_table_command)
-                q = f'''SELECT * FROM Blockchain WHERE Level >= {self.general_val_table.get_last_level_processed()}'''
+                q = f'''SELECT * FROM Blockchain WHERE Level > {self.general_val_table.get_last_level_processed()}'''
                 self.cursor.execute(q)
                 list_of_all_blocks_to_memory_as_tup = self.cursor.fetchall()
                 list_of_all_blocks_to_memory_block = [Block.create_block_from_tuple(x) for x in
@@ -195,12 +197,16 @@ class ServerDatabase:
 
         def create_table(self):
             self.cursor.execute(
-                f'''CREATE TABLE IF NOT EXISTS {self.table_name} (Username int UNIQUE,PublicKey varchar(256) UNIQUE,Balance DOUBLE({self.MAX_BALANCE_DIGIT_LEN}, {self.MAX_BALANCE_DIGIT_LEN_AFTER_DOT}));''')
+                f'''CREATE TABLE IF NOT EXISTS {self.table_name} (Username varchar(256) UNIQUE,PublicKey varchar(256) UNIQUE,Balance DOUBLE({self.MAX_BALANCE_DIGIT_LEN}, {self.MAX_BALANCE_DIGIT_LEN_AFTER_DOT}));''')
 
         def get_balance(self, username: str) -> float:
             self.cursor.execute(f'''SELECT Balance FROM {self.table_name} WHERE Username='{username}';''')
             rows = self.cursor.fetchall()
-            return rows[0][0]
+            try:
+                return rows[0][0]
+            except Exception as e:
+                print(rows)
+                raise e
 
         def is_user_exist(self, username) -> bool:
             self.cursor.execute(f'''SELECT * FROM {self.table_name} WHERE Username='{username}';''')
@@ -218,6 +224,7 @@ class ServerDatabase:
             try:
                 self.cursor.execute(s)
             except sqlite3.IntegrityError as e:
+                print(f'username {user.username},pk {user.pk}, balance {user.balance}')
                 print(e)
                 pass
 
@@ -262,7 +269,7 @@ class ServerDatabase:
                                                      self.__memory_connection, self.general_val_table)
 
         self.reward_for_block = 2  # TODO: currntly a temp value need to calculacte
-        self.proof_of_work_difficulty = 15  # TODO: currntly a temp value need to calculacte
+        self.proof_of_work_difficulty = 18  # TODO: currntly a temp value need to calculacte
         self.pow_target = 12  # TODO: currntly a temp value need to calculacte
 
     def connect_to_db(self):
@@ -294,7 +301,8 @@ class ServerDatabase:
         result_users = self.__cursor.fetchall()
         print(f'result {result}\nresult_memory {result_memory}\nresult_users {result_users}')
 
-    def process_block(self, block: Block):
+
+    def process_block(self, block: Block, node):
         """
         this function will be called every time a block has passed the threshold to be considered secure
         then and only then the block content will be taken in to account
@@ -305,13 +313,15 @@ class ServerDatabase:
         """
         if block.uploader_username == 'genesis':
             return
+
             # add all new users{
         for user in block.list_of_new_users:
             self.users_table.add_user(user)
         # }
 
         # TODO: give reward to the block owner{
-
+        if not self.users_table.is_user_exist(block.uploader_username):
+            raise Exception(f'user that uploded block does not exist {block.uploader_username}\n{block.as_str()}')
         current_balance = self.users_table.get_balance(block.uploader_username)
         self.users_table.update_balance(block.uploader_username, current_balance + self.reward_for_block)
         # }
@@ -320,10 +330,31 @@ class ServerDatabase:
         for transaction in block.list_of_transactions:
             self.users_table.make_transaction(transaction)
         # }
+        list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
+        list_of_new_users_as_str = [user.as_str() for user in block.list_of_new_users]
 
-    def add_block(self, block: Block) -> AddBlockStatus:
+        if block.uploader_username == self.username:  # aka i am the one yo upload the block
+            if not node.is_user_been_processed and node.user.as_str() in list_of_new_users_as_str:
+                node.is_user_been_processed = True
+        #    print(
+         #       f'before pro \nnu {node.list_of_new_users_to_upload}\nnuw {node.list_of_new_users_to_upload_waiting_to_be_processed}\nt {node.list_of_transactions_to_make}\n tw {node.list_of_transactions_to_make_waiting_to_be_processed}')
+            node.list_of_new_users_to_upload_waiting_to_be_processed = [user for user in
+                                                                        node.list_of_new_users_to_upload_waiting_to_be_processed
+                                                                        if
+                                                                        user.as_str() not in list_of_new_users_as_str]
+
+            node.list_of_transactions_to_make_waiting_to_be_processed = [tran for tran in
+                                                                         node.list_of_transactions_to_make_waiting_to_be_processed
+                                                                         if
+                                                                         tran.as_str() not in list_of_transactions_as_str]
+
+           # print(
+            #    f'after pro \nnu {node.list_of_new_users_to_upload}\nnuw {node.list_of_new_users_to_upload_waiting_to_be_processed}\nt {node.list_of_transactions_to_make}\n tw {node.list_of_transactions_to_make_waiting_to_be_processed}')
+
+    def add_block(self, block: Block, node) -> AddBlockStatus:
         """
         all the checking is using the memory table but every change is being done to both tables
+        :param node:
         :param block: the block to add to the database
         :return: a string that says what happened inside the function
         """
@@ -340,6 +371,9 @@ class ServerDatabase:
             f'''SELECT * FROM Blockchain WHERE CBH = '{block.current_block_hash}' ''')
         list_of_blocks_with_same_hash = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_blocks_with_same_hash) != 0:
+            self.print_data()
+            print(
+                f'-------\n{block.current_block_hash}\n{block.last_block_hash}\n{len(list_of_blocks_with_same_hash)}\n--------------------')
             print('dup block')
             return AddBlockStatus.INVALID_BLOCK  # duplicated block
         # }
@@ -349,9 +383,19 @@ class ServerDatabase:
             f'''SELECT * FROM Blockchain WHERE CBH = '{block.last_block_hash}' ''')
         list_of_fathers = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_fathers) == 0:  # aka block is an orphan
-            self.blockchain_table.orphans_list.append(block)
-            print('orphan')
-            return AddBlockStatus.ORPHAN_BLOCK
+            #if didn't found a father in memory table then check if in full table on disk
+            self.blockchain_table.cursor.execute(
+                f'''SELECT * FROM Blockchain WHERE CBH = '{block.last_block_hash}' ''')
+            list_of_fathers = self.blockchain_table.memory_cursor.fetchall()
+            if len(list_of_fathers) == 0:
+                self.blockchain_table.orphans_list.append(block)
+                print('orphan')
+                return AddBlockStatus.ORPHAN_BLOCK
+            elif len(list_of_fathers)==1:
+                pass
+            else:
+                raise Exception('two much fathers')
+
 
         elif len(list_of_fathers) == 1:  # aka found a father
             father = list_of_fathers[0]
@@ -379,7 +423,6 @@ class ServerDatabase:
             # {'
             print(f'cbl {block.level}, {self.blockchain_table.block_to_calc_proof_of_work.level}')
             if block.level > self.blockchain_table.block_to_calc_proof_of_work.level:
-                print('here')
                 self.blockchain_table.block_to_calc_proof_of_work = block
             # }
 
@@ -422,17 +465,36 @@ class ServerDatabase:
                     pass
                 elif len_of_list_of_blocks_that_need_to_be_processed == 1:
                     block_to_process = Block.create_block_from_tuple(list_of_blocks_that_need_to_be_processed[0])
-                    self.process_block(block_to_process)
+                    self.process_block(block_to_process, node)
                     self.general_val_table.set_last_level_processed(block_to_process.level)
                     # remove blocks that  became irrelevant
                     command = f'''SELECT * FROM Blockchain WHERE Level <= {block_to_process.level} '''
                     self.blockchain_table.memory_cursor.execute(command)
-                    l = self.blockchain_table.memory_cursor.fetchall()
-                    for i in l:
-                        print(f"deleting block {i[5]}")
+                    list_of_blocks_to_delete = self.blockchain_table.memory_cursor.fetchall()
+                    list_of_blocks_to_delete = [Block.create_block_from_tuple(block) for block in
+                                                list_of_blocks_to_delete]
+                    for block in list_of_blocks_to_delete:
+                        # return all the transactions and users that the node uploaded because the have been deleted
+                        # and need to go back on the list so that the node could try to upload then again{
+                        if block.uploader_username == self.username:
+                            list_of_new_user_as_str = [user.as_str() for user in block.list_of_new_users]
+                            list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
+
+                            node.list_of_new_users_to_upload.extend(
+                                [user for user in node.list_of_new_users_to_upload_waiting_to_be_processed if
+                                 user.as_str() in list_of_new_user_as_str])
+
+                            node.list_of_transactions_to_make.extend(
+                                [tran for tran in node.list_of_transactions_to_make_waiting_to_be_processed if
+                                 tran.as_str() in list_of_transactions_as_str])
+                        # }
+
+                        print(f"deleting block {block.as_str()}")
                     command = f'''DELETE FROM Blockchain WHERE Level <= {block_to_process.level} '''
                     self.blockchain_table.memory_cursor.execute(command)
                 else:
+                    print(list_of_blocks_that_need_to_be_processed)
+
                     raise Exception('more then one block has passed the threshold')
                 # }
             elif len(list_of_brothers) > 1:  # aka i am not the first son
@@ -444,7 +506,7 @@ class ServerDatabase:
             for orphan_block in self.blockchain_table.orphans_list:
                 if orphan_block.last_block_hash == block.current_block_hash:
                     self.blockchain_table.orphans_list.remove(orphan_block)
-                    self.add_block(orphan_block)
+                    self.add_block(orphan_block, node)
             return AddBlockStatus.SUCCESSFUL
         else:
             raise Exception('block has an unexpected amount of fathers')

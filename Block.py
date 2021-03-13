@@ -1,6 +1,6 @@
-import datetime
 import hashlib
 import json
+from datetime import datetime
 
 from Transaction import Transaction
 from User import User
@@ -8,7 +8,8 @@ from User import User
 
 class Block:
     def __init__(self, uploader_username: str, list_of_transactions: list, list_of_new_users: list,
-                 last_block_hash: str, timestamp: str = str(datetime.datetime.now()), current_block_hash: str = None):
+                 last_block_hash: str, timestamp: str = None,
+                 current_block_hash: str = None):
         """
         Constructor for the `Block` class.
         :param index: Unique ID of the block.
@@ -30,7 +31,7 @@ class Block:
         self.uploader_username = uploader_username
         self.last_block_hash = last_block_hash
         self.proof_of_work = ''  # TODO
-        self.timestamp = timestamp
+        self.timestamp = timestamp if timestamp is not None else str(datetime.now())
         self.list_of_transactions = list_of_transactions
         self.list_of_new_users = list_of_new_users
         if current_block_hash is None:
@@ -51,16 +52,15 @@ class Block:
 
     @staticmethod
     def create_block_from_tuple_received(tup):
-        uploader_username, timestamp, list_of_transactions_as_str, list_of_new_users_as_str, pow,last_block_hash = tup
+        uploader_username, timestamp, list_of_transactions_as_str, list_of_new_users_as_str, pow, last_block_hash = tup
         list_of_new_users_as_str = json.loads(list_of_new_users_as_str)
         list_of_transactions_as_str = json.loads(list_of_transactions_as_str)
         list_of_new_users = [User.create_from_str(user_as_str) for user_as_str in list_of_new_users_as_str]
         list_of_transactions = [Transaction.create_from_str(block_as_str) for block_as_str in
                                 list_of_transactions_as_str]
-        b = Block(uploader_username, list_of_transactions, list_of_new_users,last_block_hash,timestamp=timestamp)
+        b = Block(uploader_username, list_of_transactions, list_of_new_users, last_block_hash, timestamp=timestamp)
         b.proof_of_work = pow
         return b
-
 
     @staticmethod
     def create_block_from_tuple(tup: tuple):
@@ -79,6 +79,7 @@ class Block:
         b = Block(uploader_username, list_of_transactions, list_of_new_users, last_block_hash, timestamp,
                   current_block_hash)
         b.set_table_parameters(id, parent_id, sequence_number, level, security_number)
+        b.proof_of_work = proof_of_work
         return b
 
     def as_str(self) -> str:

@@ -5,14 +5,14 @@ import json
 class Transaction:
 
     def __init__(self, sender_username: str, receiver_username: str, amount: float, description: str,
-                 timestamp: str = str(datetime.datetime.now()), sender_signature: str = '',
+                 timestamp: str = None, sender_signature: str = '',
                  receiver_signature: str = ''):
         # data related{
         self.sender_username = sender_username
         self.receiver_username = receiver_username
         self.amount = amount
         self.description = description
-        self.timestamp = timestamp
+        self.timestamp = timestamp if timestamp is not None else str(datetime.datetime.now())
         # }
 
         # security related{
