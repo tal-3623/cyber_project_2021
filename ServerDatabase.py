@@ -5,6 +5,7 @@ import threading
 
 from AddBlockStatus import AddBlockStatus
 from Block import Block
+from EncriptionKey import Key
 from Transaction import Transaction
 from User import User
 
@@ -213,18 +214,18 @@ class ServerDatabase:
             rows = self.cursor.fetchall()
             return not len(rows) == 0
 
-        def get_public_key(self, username: str):
+        def get_public_key(self, username: str) -> Key:
             self.cursor.execute(f'''SELECT PublicKey FROM {self.table_name} WHERE Username='{username}';''')
             rows = self.cursor.fetchall()
-            return rows[0][0]
+            return Key.create_from_str(rows[0][0])
 
         def add_user(self, user: User):
-            s = f'''INSERT INTO {self.table_name} (Username, PublicKey, Balance) VALUES('{user.username}','{user.pk}',
+            s = f'''INSERT INTO {self.table_name} (Username, PublicKey, Balance) VALUES('{user.username}','{user.pk.as_str()}',
             '{user.balance}');'''
             try:
                 self.cursor.execute(s)
             except sqlite3.IntegrityError as e:
-                print(f'username {user.username},pk {user.pk}, balance {user.balance}')
+                print(f'username {user.username},pk {user.pk.as_str()}, balance {user.balance}')
                 print(e)
                 pass
 
@@ -236,17 +237,28 @@ class ServerDatabase:
             command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{transaction.sender_username}' '''
             self.cursor.execute(command)
             tup = self.cursor.fetchall()[0]
-            sender = User(tup[0], tup[1], int(tup[2]))
+            sender = User(tup[0], Key.create_from_str(tup[1]), float(tup[2]))
 
             command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{transaction.receiver_username}' '''
             self.cursor.execute(command)
             tup = self.cursor.fetchall()[0]
-            receiver = User(tup[0], tup[1], int(tup[2]))
+            receiver = User(tup[0], Key.create_from_str(tup[1]), float(tup[2]))
+
+            print(f'sender: {sender.username} , {sender.pk.as_str()}, {sender.balance}')
+            print(f'receiver: {receiver.username} , {receiver.pk.as_str()}, {receiver.balance}')
 
             if sender.balance - transaction.amount < 0:
+                print('not enough money')
                 return  # aka not enough money
 
             # TODO: check digital signature of both users{
+            sender_pk = sender.pk
+            receiver_pk = receiver.pk
+
+            is_tran_valid = sender_pk.verify(transaction.sender_signature,
+                                             transaction.data_as_str()) and receiver_pk.verify(
+                transaction.receiver_signature, transaction.data_as_str())
+            print(f'is_tran_valid {is_tran_valid}')
             #  }
 
             # changing the users balance{
@@ -327,7 +339,13 @@ class ServerDatabase:
 
         # TODO: handle all transactions {
         for transaction in block.list_of_transactions:
+            # TODO: write code that informs clients about transactions that had been processed
+            # TODO: and the inform them on unsigned transactions (aka a transaction request)
+
+            # temp{
             self.users_table.make_transaction(transaction)
+            # }
+
         # }
         list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
         list_of_new_users_as_str = [user.as_str() for user in block.list_of_new_users]

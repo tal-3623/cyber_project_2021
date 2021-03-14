@@ -15,6 +15,9 @@ MAX_NONCE = 2 ** 32  # 4 billion
 PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY = 10000
 # }
 
+#encription {
+KEY_BIT_LEN = 64
+# }
 
 # block {
 MAX_LEN_OF_LIST_OF_NEW_USERS = 50

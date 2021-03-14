@@ -25,6 +25,15 @@ class Transaction:
                               self.timestamp, self.sender_signature, self.receiver_signature]
         return json.dumps(list_of_components)
 
+    def data_as_str(self):
+        """
+        no signatures
+        :return:
+        """
+        list_of_components = [self.sender_username, self.receiver_username, self.amount, self.description,
+                              self.timestamp]
+        return json.dumps(list_of_components)
+
     @staticmethod
     def create_from_str(string: str):
         sender_username, receiver_username, amount, description, timestamp, sender_signature, receiver_signature = json.loads(
@@ -33,4 +42,13 @@ class Transaction:
                            receiver_signature)
 
     def to_string(self):
-        print(f'{self.sender_username, self.receiver_username, self.amount, self.description, self.timestamp, self.sender_signature, self.receiver_signature}')
+        print(
+            f'{self.sender_username, self.receiver_username, self.amount, self.description, self.timestamp, self.sender_signature, self.receiver_signature}')
+
+    # TODO: maybe delete
+    # def verify(self, sender_pk: Key, receiver_pk: Key):
+    #     if sender_pk.verify(self.receiver_signature, self.data_as_str()) and receiver_pk.verify(self.sender_signature,                                                                                    self.data_as_str()):
+    #         return True
+    #     else:
+    #         print('')
+    #         return False
