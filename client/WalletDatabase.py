@@ -41,7 +41,7 @@ class WalletDatabase:
             print('before', private_key.as_str())
             private_key_encrypted = json.dumps([ord(char) + key_for_encryption for char in private_key.as_str()])
             command = f'''INSERT INTO Users (Username,PasswordHash,PublicKey,PrivateKey) VALUES ('{username}','{password_sha_256}','{public_key.as_str()}','{private_key_encrypted}')'''
-            print('eexexexeeeex')
+            print('eexexexeeeeeex')
             self.__cursor.execute(command)
             self.__connection.commit()
 
