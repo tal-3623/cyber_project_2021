@@ -1,3 +1,7 @@
+import os
+import string
+from pathlib import Path
+
 # connection {
 PORT_FOR_NODES = 89
 PORT_FOR_CLIENTS = 233
@@ -9,17 +13,63 @@ SOCKET_ACCEPT_TIMEOUT = 0.1
 SOCKET_RECEIVE_TIMEOUT = 0.1
 # }
 
+#client{
+SOCKET_CLIENT_RECEIVE_TIMEOUT = 0.3
+# }
+
 
 # proof of work{
 MAX_NONCE = 2 ** 32  # 4 billion
 PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY = 10000
 # }
 
-#encription {
+# encription {
 KEY_BIT_LEN = 64
 # }
 
 # block {
 MAX_LEN_OF_LIST_OF_NEW_USERS = 50
 MAX_LEN_OF_LIST_OF_TRANSACTIONS = 50
+
 # }
+
+
+# {
+ALLOWED_CHARACTERS = []
+ALLOWED_CHARACTERS.extend(string.ascii_lowercase)
+ALLOWED_CHARACTERS.extend(string.ascii_uppercase)
+ALLOWED_CHARACTERS.extend(string.digits)
+print(f"FORBIDDEN_CHARACTERS\n{ALLOWED_CHARACTERS}")
+
+
+# }
+
+def __file_name__(name: str, format='.png', path=str(str(Path.cwd() / 'res' / 'des'))) -> str:
+    """
+    A util function for helping in the path naming process.
+    :param name: The name of the file.
+    :param format: The format of the file. Default is PNG
+    :param path: The abs path of the file. Default is under .../res/des/
+    :return: The full abs path of the file.
+    """
+
+    f = name + format
+    return os.path.join(path, f)
+
+
+class Files:
+    """
+    A const class that contains all the files paths.
+    """
+    KV_DES_FILE = __file_name__("wallet_des", format='.kv', path=str(Path.cwd() / 'res'))
+    MAIN_SCREEN = __file_name__("MAIN")
+    CONNECT_SCREEN = __file_name__("connect")
+    SIGN_UP_SCREEN = __file_name__("SignUp")
+    WAITING_FOR_CONFIRMATION_SCREEN = __file_name__("WaitingForCon")
+    USER_PAGE_SCREEN = __file_name__("UserPage")
+
+    BACK_BTN = __file_name__("BackBTN")
+    CREATE_FIRST_NODE_BTN = __file_name__("CreateFirstNodeBTN")
+    LOGIN_BTN = __file_name__("LoginBTN")
+    SIGN_UP_BTN = __file_name__("SignUpBTN")
+    SUBMIT_BTN = __file_name__("SubmitBTN")

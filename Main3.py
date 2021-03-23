@@ -1,7 +1,7 @@
-from EncriptionKey import Key
-from Node2 import Node
-from Transaction import Transaction
-from User import User
+from server.Node2 import Node
+from utill.encription.EncriptionKey import Key
+from utill.blockchain.Transaction import Transaction
+from utill.blockchain.User import User
 
 
 def l(names: list):

@@ -1,0 +1,190 @@
+#:kivy 1.11.1
+
+#: import NoTransition kivy.uix.screenmanager.NoTransition
+#: import Image kivy.uix.image.Image
+#=============================================
+
+WindowManager:
+    transition: NoTransition()
+
+    MenuScreen:
+        id: MenuScreen
+    ConnectScreen:
+        id: ConnectScreen
+    SignUpScreen:
+        id: SignUpScreen
+    WaitingForConfirmationScreen:
+        id: WaitingForConfirmationScreen
+    UserPageScreen:
+        id: UserPageScreen
+
+
+#=============================================
+
+<MenuScreen>:
+    name: "MenuScreen"
+
+    Image:
+        source: app.assets.MAIN_SCREEN
+        size_hint: 1,1
+        keep_ratio: True
+        allow_stretch: False
+
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint: 0.6, 0.6
+        pos_hint: {'center_x': 0.6, 'center_y': 0.4}
+        padding: 100
+        spacing: 40
+
+        ImageButton:
+            id: Login_btn
+            source: app.assets.LOGIN_BTN
+            size_hint: 0.5, 0.1
+            keep_ratio: False
+            allow_stretch: False
+
+            on_release:
+                app.connect_screen_from = "log in"
+                app.root.current = "ConnectScreen"
+
+        ImageButton:
+            id: Sign_up_btn
+            source: app.assets.SIGN_UP_BTN
+            size_hint: 0.5, 0.1
+            keep_ratio: False
+            allow_stretch: False
+
+            on_release:
+                app.connect_screen_from = "sign up"
+                app.root.current = "ConnectScreen"
+
+        ImageButton:
+            id : Create_first_node_btn
+            source: app.assets.CREATE_FIRST_NODE_BTN
+            size_hint: 0.5, 0.1
+            keep_ratio: False
+            allow_stretch: False
+
+
+
+
+
+
+<ConnectScreen>:
+    name: "ConnectScreen"
+
+    Image:
+        source: app.assets.CONNECT_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+    ImageButton:
+        id : Submit_btn
+        source: app.assets.SUBMIT_BTN
+        size_hint: 0.184, 0.07
+        keep_ratio: False
+        pos_hint: {'x':0.4,'y' : 0.29}
+        allow_stretch: False
+
+        on_release:
+            app.connect()
+
+    TransTextInput:
+        id: port_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.4444}
+
+    TransTextInput:
+        id: ip_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.6044}
+
+
+
+
+    BackButton:
+
+
+<SignUpScreen>:
+    name : "SignUpScreen"
+
+    Image:
+        source: app.assets.SIGN_UP_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+    TransTextInput:
+        id: username_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.6044}
+
+    TransTextInput:
+        id: password_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.4444}
+
+    ImageButton:
+        id : Submit_btn
+        source: app.assets.SUBMIT_BTN
+        size_hint: 0.184, 0.07
+        keep_ratio: False
+        pos_hint: {'x':0.4,'y' : 0.29}
+        allow_stretch: False
+
+        on_release:
+            app.sign_up()
+
+    BackButton:
+
+
+
+<UserPageScreen>:
+    name: "UserPageScreen"
+
+    Image:
+        source: app.assets.USER_PAGE_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+
+
+
+<WaitingForConfirmationScreen>:
+    name: "WaitingForConfirmationScreen"
+
+    Image:
+        source: app.assets.WAITING_FOR_CONFIRMATION_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+
+
+<BackButton>:
+    text: "Back"
+    size_hint: None, None
+    pos_hint: {"right": 0.98, "bottom": 0.9}
+    font_size: 46
+
+    on_release:
+        app.pressed_back()
+
+
+
+
+
+<TransTextInput>:
+    multiline: False
+    foreground_color: (1,0,1,1)
+    background_color: (0,0,0,0)
+    cursor_color: (1, 1, 1, 0.971)
+    cursor_width: 1
+    coulor: (1, 1, 1, 1)
+
+    canvas.before:
+        Color:
+            rgba: self.coulor
