@@ -64,7 +64,7 @@ class WalletDatabase:
         items = self.__cursor.fetchall()
         for i in items:
             user = i[0]
-            hsah = i[1]
+            hash = i[1]
             pk = i[2]
             sk = json.loads(i[3])
             print("after", sk)
