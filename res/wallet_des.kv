@@ -17,6 +17,8 @@ WindowManager:
         id: WaitingForConfirmationScreen
     UserPageScreen:
         id: UserPageScreen
+    LogInScreen:
+        id: LogInScreen
 
 
 #=============================================
@@ -68,6 +70,45 @@ WindowManager:
 
 
 
+<CreateFirstNodeScreen>:
+    name: "CreateFirstNodeScreen"
+
+    Image:
+        source: app.assets.CREATE_FIRST_NODE_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+    ImageButton:
+        id : Submit_btn
+        source: app.assets.SUBMIT_BTN
+        size_hint: 0.184, 0.07
+        keep_ratio: False
+        pos_hint: {'x':0.4,'y' : 0.29}
+        allow_stretch: False
+
+        on_release:
+            app.create_first_node()
+
+    TransTextInput:
+        id: username_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.4444}
+
+    TransTextInput:
+        id: password_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.4444}
+
+    TransTextInput:
+        id: port_for_nodes_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.4444}
+
+    TransTextInput:
+        id: port_for_clients_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.4444}
 
 
 
@@ -141,6 +182,40 @@ WindowManager:
 
 
 
+
+<LogInScreen>:
+    name : "LogInScreen"
+
+    Image:
+        source: app.assets.LOG_IN_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+    TransTextInput:
+        id: username_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.6044}
+
+    TransTextInput:
+        id: password_wig
+        size_hint: 0.1667, 0.0416
+        pos_hint: {'x': 0.4375, 'y': 0.4444}
+
+    ImageButton:
+        id : Submit_btn
+        source: app.assets.SUBMIT_BTN
+        size_hint: 0.184, 0.07
+        keep_ratio: False
+        pos_hint: {'x':0.4,'y' : 0.29}
+        allow_stretch: False
+
+        on_release:
+            app.log_in()
+
+    BackButton:
+
+
 <UserPageScreen>:
     name: "UserPageScreen"
 
@@ -149,6 +224,46 @@ WindowManager:
         size_hint: 1,1
         keep_ratio: False
         allow_stretch: False
+
+
+    Label:
+        id: username_label
+        pos_hint: {'center_x' : 1 ,'center_y' : 0.851}
+        markup: True
+        text: ''
+        font_size: 32
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+
+
+    RecantsTransactions:
+        id : RecantsTransactions
+
+
+    ImageButton:
+        id : Send_btn
+        source: app.assets.SEND_BTN
+        size_hint: 0.09375, 0.16667
+        keep_ratio: False
+        pos_hint: {'x':0.7395,'y' : 0.44444}
+        allow_stretch: False
+
+        on_release:
+
+
+    ImageButton:
+        id : Receive_btn
+        source: app.assets.RECEIVE_BTN
+        size_hint: 0.09375, 0.16667
+        keep_ratio: False
+        pos_hint: {'x':0.16667,'y' : 0.44444}
+        allow_stretch: False
+
+        on_release:
+
+
+    BackButton:
 
 
 

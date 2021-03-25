@@ -65,10 +65,8 @@ def generate_prime(n: int):
         if not isMillerRabinPassed(prime_candidate):
             continue
         else:
-            print(n, "bit prime is: \n", prime_candidate)
             return prime_candidate
 
 
 if __name__ == '__main__':
-    # print(generate_prime(1024))
     pass

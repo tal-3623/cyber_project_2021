@@ -11,8 +11,14 @@ class MessageBetweenNodes:
     def recv(self, sock: socket.socket):
         msg = ''
         char = sock.recv(1).decode()
+        if len(char) == 0:
+            print("ConnectionError")
+            raise ConnectionError
         msg += char
         while char != '#':
+            if len(char) == 0:
+                print("ConnectionError")
+                raise ConnectionError
             char = sock.recv(1).decode()
             msg += char
         msg = msg[:-1]  # remove last item -> '#'
@@ -33,8 +39,14 @@ class MessageBetweenNodeAndClient:
     def recv(self, sock: socket.socket):
         msg = ''
         char = sock.recv(1).decode()
+        if len(char) == 0:
+            print("ConnectionError")
+            raise ConnectionError
         msg += char
         while char != '#':
+            if len(char) == 0:
+                print("ConnectionError")
+                raise ConnectionError
             char = sock.recv(1).decode()
             msg += char
         msg = msg[:-1]  # remove last item -> '#'

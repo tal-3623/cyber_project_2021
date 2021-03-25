@@ -23,10 +23,7 @@ class Key:
 
     def encrypt(self, msg: str):
         numberRepr = [ord(char) for char in msg]
-        print("Number representation before encryption: ", numberRepr)
-        print(self.__key, self.__n)
         cipher = [pow(ord(char), self.__key, self.__n) for char in msg]
-        print(f'after {cipher}')
 
         # Return the array of bytes
         return cipher
@@ -37,16 +34,15 @@ class Key:
         :param cipher:
         :return: the decrypted cipher, if the key matches the cipher
         """
-        print(f'key {self.__key} n {self.__n}')
-        print(f'cipher is {cipher} ')
+
         numberRepr = [pow(char, self.__key, self.__n) for char in cipher]
-        print('number rep ->', numberRepr)
+
         try:
             plain = [chr(num) for num in numberRepr]
         except OverflowError:
             print('OverflowError')
             return '', False  # aka the key could not decrypt probably cause he don't match
-        print("Decrypted number representation is: ", numberRepr)
+
 
         # Return the array of bytes as a string
         return ''.join(plain), True
@@ -87,7 +83,6 @@ class Key:
         # Public key is (e, n) and private key is (d, n)
         self.__key = d
         self.__n = n
-        print(f'n is -->{self.__n}')
         public_key = Key(e, n)
         return public_key
 
@@ -97,7 +92,6 @@ class Key:
         return hashed
 
     def verify(self, signature: str, message: str):
-        print(f'naked sign {signature}')
         signature = json.loads(signature)
         signature, is_successful = self.decrypt(signature)
         if not is_successful:
@@ -105,11 +99,9 @@ class Key:
         ourHashed = Key.hashFunction(message)
         if signature == ourHashed:
             print("Verification successful: ", )
-            print(signature, " = ", ourHashed)
             return True
         else:
             print("Verification failed")
-            print(signature, " != ", ourHashed)
             return False
 
     def sign(self, msg: str) -> str:

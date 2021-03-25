@@ -18,7 +18,6 @@ class WalletDatabase:
                 f'''SELECT name FROM sqlite_master WHERE type='table' AND name='{self.__table_name}';''')
             result = len(self.__cursor.fetchall())
             create_table_command = f'''CREATE TABLE  {self.__table_name} (Username VARCHAR(255),PasswordHash VARCHAR(256),PublicKey VARCHAR(256),PrivateKey JSON);'''
-
             if result == 0:  # aka table does not exist
                 self.__cursor.execute(create_table_command)
             elif result == 1:
@@ -58,13 +57,31 @@ class WalletDatabase:
         self.users_table.add_new_user(username, password, private_key, public_key)
         # self.print_data()
 
-    def print_data(self):
-        c = f'SELECT * FROM Users'
-        self.__cursor.execute(c)
-        items = self.__cursor.fetchall()
-        for i in items:
-            user = i[0]
-            hash = i[1]
-            pk = i[2]
-            sk = json.loads(i[3])
-            print("after", sk)
+    def is_user_exist(self, username: str) -> bool:
+        self.__cursor.execute(f'''SELECT * FROM Users WHERE Username='{username}';''')
+        rows = self.__cursor.fetchall()
+        return not len(rows) == 0
+
+    def check_if_password_valid(self, username: str, password: str):
+        self.__cursor.execute(f'''SELECT * FROM Users WHERE Username='{username}';''')
+        rows = self.__cursor.fetchall()
+        tup = rows[0]
+        username, real_password_hash, pk, sk = tup
+        print(tup)
+        my_password_hash = hashlib.sha256(password.encode()).hexdigest()
+        print(my_password_hash)
+        print(real_password_hash)
+        return my_password_hash == real_password_hash
+
+    def get_keys(self, username: str, password: str):
+        self.__cursor.execute(f'''SELECT * FROM Users WHERE Username='{username}';''')
+        rows = self.__cursor.fetchall()
+        tup = rows[0]
+        password_md5 = hashlib.md5(password.encode()).hexdigest()
+        key_for_encryption = int(password_md5, base=16)
+        username, real_password_hash, pk, sk = tup
+        pk = Key.create_from_str(pk)
+        sk = json.loads(sk)
+        sk = ''.join([chr(num - key_for_encryption) for num in sk])
+        private_key = Key.create_from_str(sk)
+        return pk, private_key

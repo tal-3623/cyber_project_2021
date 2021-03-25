@@ -13,8 +13,9 @@ SOCKET_ACCEPT_TIMEOUT = 0.1
 SOCKET_RECEIVE_TIMEOUT = 0.1
 # }
 
-#client{
-SOCKET_CLIENT_RECEIVE_TIMEOUT = 0.3
+# client{
+SOCKET_CLIENT_RECEIVE_LONG_TIMEOUT = 2
+SOCKET_CLIENT_RECEIVE_SHORT_TIMEOUT = 0.1
 # }
 
 
@@ -67,9 +68,18 @@ class Files:
     SIGN_UP_SCREEN = __file_name__("SignUp")
     WAITING_FOR_CONFIRMATION_SCREEN = __file_name__("WaitingForCon")
     USER_PAGE_SCREEN = __file_name__("UserPage")
+    LOG_IN_SCREEN = __file_name__("LogIn")
+    CREATE_FIRST_NODE_SCREEN = __file_name__("CreateFirstNode")
+    USER_PAGE = __file_name__("UserPage")
+    RECEIVE_SCREEN = __file_name__("Receive")
+    RECEIVE_FULL_SCREEN = __file_name__("ReceiveFull")
+    SEND_SCREEN = __file_name__("Send")
 
     BACK_BTN = __file_name__("BackBTN")
     CREATE_FIRST_NODE_BTN = __file_name__("CreateFirstNodeBTN")
     LOGIN_BTN = __file_name__("LoginBTN")
     SIGN_UP_BTN = __file_name__("SignUpBTN")
     SUBMIT_BTN = __file_name__("SubmitBTN")
+    BIG_SEND_BTN = __file_name__("BigSendBTN")
+    RECEIVE_BTN = __file_name__("ReceiveBTN")
+    SEND_BTN = __file_name__("SendBTN")

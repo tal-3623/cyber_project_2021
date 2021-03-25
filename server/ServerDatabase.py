@@ -210,6 +210,12 @@ class ServerDatabase:
                 print(rows)
                 raise e
 
+        def get_user(self, username: str):
+            command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{username}' '''
+            self.cursor.execute(command)
+            tup = self.cursor.fetchall()[0]
+            return User(tup[0], Key.create_from_str(tup[1]), float(tup[2]))
+
         def is_user_exist(self, username) -> bool:
             self.cursor.execute(f'''SELECT * FROM {self.table_name} WHERE Username='{username}';''')
             rows = self.cursor.fetchall()
@@ -240,15 +246,12 @@ class ServerDatabase:
             self.cursor.execute(s)
 
         def make_transaction(self, transaction: Transaction):
-            command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{transaction.sender_username}' '''
-            self.cursor.execute(command)
-            tup = self.cursor.fetchall()[0]
-            sender = User(tup[0], Key.create_from_str(tup[1]), float(tup[2]))
+            if not self.is_user_exist(transaction.receiver_username) or not self.is_user_exist(
+                    transaction.sender_username):
+                return  # one of the user does not exist
 
-            command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{transaction.receiver_username}' '''
-            self.cursor.execute(command)
-            tup = self.cursor.fetchall()[0]
-            receiver = User(tup[0], Key.create_from_str(tup[1]), float(tup[2]))
+            sender = self.get_user(transaction.sender_username)
+            receiver = self.get_user(transaction.receiver_username)
 
             print(f'sender: {sender.username} , {sender.pk.as_str()}, {sender.balance}')
             print(f'receiver: {receiver.username} , {receiver.pk.as_str()}, {receiver.balance}')
@@ -261,15 +264,14 @@ class ServerDatabase:
             sender_pk = sender.pk
             receiver_pk = receiver.pk
 
-            is_tran_valid = sender_pk.verify(transaction.sender_signature,
-                                             transaction.data_as_str()) and receiver_pk.verify(
-                transaction.receiver_signature, transaction.data_as_str())
+            is_tran_valid = transaction.is_signature_valid(sender_pk, receiver_pk)
             print(f'is_tran_valid {is_tran_valid}')
             #  }
 
             # changing the users balance{
-            self.update_balance(sender.username, sender.balance - transaction.amount)
-            self.update_balance(receiver.username, receiver.balance + transaction.amount)
+            if is_tran_valid:
+                self.update_balance(sender.username, sender.balance - transaction.amount)
+                self.update_balance(receiver.username, receiver.balance + transaction.amount)
             # }
 
     def __init__(self, username: str, is_first_node: bool):  # TODO: maybe delete is first node
@@ -287,7 +289,7 @@ class ServerDatabase:
                                                      self.__memory_connection, self.general_val_table)
 
         self.reward_for_block = 2  # TODO: currntly a temp value need to calculacte
-        self.proof_of_work_difficulty = 15  # TODO: currntly a temp value need to calculacte
+        self.proof_of_work_difficulty = 17  # TODO: currntly a temp value need to calculacte
         self.pow_target = 12  # TODO: currntly a temp value need to calculacte
 
     def connect_to_db(self):
@@ -374,6 +376,7 @@ class ServerDatabase:
                     # send to the client that is waiting for confirmation that his user has been successfully uploaded{
                     client_socket = node.dict_of_clients_and_usernames_waiting_for_confirmation[user]
                     msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.SIGN_UP_CONFIRMED)
+                    node.dict_of_clients_and_usernames_waiting_for_confirmation.pop(user)  # remove
                     print(f'sending {msg.message_type.name}, {msg.content}')
                     try:
                         msg.send(client_socket)
@@ -388,7 +391,7 @@ class ServerDatabase:
         :param block: the block to add to the database
         :return: a string that says what happened inside the function
         """
-
+        print("add block")
         # check if block hash match  {
         if block.current_block_hash != block.compute_hash():
             print('invalid hash')
@@ -521,7 +524,7 @@ class ServerDatabase:
                     self.blockchain_table.memory_cursor.execute(command)
                 else:
                     print(len_of_list_of_blocks_that_need_to_be_processed)
-                    for i in  list_of_blocks_that_need_to_be_processed:
+                    for i in list_of_blocks_that_need_to_be_processed:
                         print(Block.create_block_from_tuple(i).as_str())
                     raise Exception('more then one block has passed the threshold')
                 # }
@@ -534,11 +537,27 @@ class ServerDatabase:
             for orphan_block in self.blockchain_table.orphans_list:
                 if orphan_block.last_block_hash == block_that_was_inserted.current_block_hash:
                     self.blockchain_table.orphans_list.remove(orphan_block)
-                    try:
-                        self.add_block(orphan_block, node)
-                    except RecursionError as e :
-                        print(f'RecursionError\n {e.__str__()}')
-                        return AddBlockStatus.SUCCESSFUL
+                    self.add_block(orphan_block, node)
+
             return AddBlockStatus.SUCCESSFUL
         else:
             raise Exception('block has an unexpected amount of fathers')
+
+    def get_all_transactions_of(self, username: str)->list:
+        command = f'''SELECT LOT FROM Blockchain'''
+        list_to_send = []
+        self.blockchain_table.cursor.execute(command)
+        list_of_list_of_transactions = self.blockchain_table.cursor.fetchall()
+        for list_of_transactions in list_of_list_of_transactions:
+            list_of_transactions = json.loads(list_of_transactions)
+            list_of_transactions = [Transaction.create_from_str(string) for string in list_of_transactions]
+            for transaction in list_of_transactions:
+                if transaction.sender_username == username or transaction.receiver_username == username:
+                    sender = self.users_table.get_user(transaction.sender_username)
+                    receiver = self.users_table.get_user(transaction.receiver_username)
+
+                    if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
+                        list_to_send.append(transaction)
+                    elif transaction.receiver_username == username and transaction.is_sender_signature_valid(sender.pk):
+                        list_to_send.append(transaction)
+        return list_to_send

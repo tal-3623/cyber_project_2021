@@ -1,6 +1,8 @@
 import datetime
 import json
 
+from utill.encription.EncriptionKey import Key
+
 
 class Transaction:
 
@@ -45,10 +47,16 @@ class Transaction:
         print(
             f'{self.sender_username, self.receiver_username, self.amount, self.description, self.timestamp, self.sender_signature, self.receiver_signature}')
 
-    # TODO: maybe delete
-    # def verify(self, sender_pk: Key, receiver_pk: Key):
-    #     if sender_pk.verify(self.receiver_signature, self.data_as_str()) and receiver_pk.verify(self.sender_signature,                                                                                    self.data_as_str()):
-    #         return True
-    #     else:
-    #         print('')
-    #         return False
+    def __repr__(self):
+        return f'from {self.sender_username} to {self.receiver_username}, {self.amount} for {self.description} at {self.timestamp}'
+
+    def is_signature_valid(self, sender_pk: Key, receiver_pk: Key):
+        is_sender_signature_valid = self.is_sender_signature_valid(sender_pk)
+        is_receiver_signature_valid = self.is_receiver_signature_valid(receiver_pk)
+        return is_sender_signature_valid and is_receiver_signature_valid
+
+    def is_sender_signature_valid(self, sender_pk: Key):
+        return sender_pk.verify(self.sender_signature, self.data_as_str())
+
+    def is_receiver_signature_valid(self, receiver_pk: Key):
+        return receiver_pk.verify(self.receiver_signature, self.data_as_str())

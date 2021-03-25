@@ -12,9 +12,24 @@ class MessageTypeBetweenNodes(Enum):
 
 
 class MessageTypeBetweenNodeAndClient(Enum):
-    LOG_IN = 0
+    # log in{
+    LOG_IN_REQUEST = 0
+    LOG_IN_RAND = 1
+    LOG_IN_RAND_ANSWER = 2
+    LOG_IN_ACCEPTED = 3
+    LOG_IN_FAILED = 4
+    # }
 
-    SIGN_UP = 1
-    SIGN_UP_ANSWER = 2
-    SIGN_UP_CONFIRMED = 3
-    SIGN_UP_FAILED = 4
+    # sign up{
+    SIGN_UP = 5
+    SIGN_UP_ANSWER = 6
+    SIGN_UP_CONFIRMED = 7
+    SIGN_UP_FAILED = 8
+    # }
+
+    # transactions{
+    TRANSACTION_COMPLETED = 9
+    TRANSACTION_OFFERED = 10
+    GET_ALL_TRANSACTIONS = 11
+    RECEIVE_ALL_TRANSACTIONS = 12
+    # }
