@@ -3,11 +3,16 @@ from server.Node2 import Node
 from utill.blockchain.User import User
 from utill.encription.EncriptionKey import Key
 
-username = input('user ? ')
-password = input('password? ')
-port_for_nodes = int(input('port for nodes '))
-port_for_clients = int(input('port for clients '))
-is_first_node = input('is_first_node ').lower() == 't'
+# username = input('user ? ')
+# password = input('password? ')
+# port_for_nodes = int(input('port for nodes '))
+# port_for_clients = int(input('port for clients '))
+# is_first_node = input('is_first_node ').lower() == 't'
+username = 'tal'
+password = 'tal123'
+port_for_nodes = 555
+port_for_clients = 832
+is_first_node = True
 if not is_first_node:
     node_to_connect = (input("ip "), int(input('port ')))
 

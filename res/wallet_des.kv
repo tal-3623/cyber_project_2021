@@ -19,7 +19,12 @@ WindowManager:
         id: UserPageScreen
     LogInScreen:
         id: LogInScreen
-
+    SendScreen:
+        id: SendScreen
+    ReceiveScreen:
+        id: ReceiveScreen
+    FullReceiveScreen:
+        id: FullReceiveScreen
 
 #=============================================
 
@@ -69,46 +74,6 @@ WindowManager:
             allow_stretch: False
 
 
-
-<CreateFirstNodeScreen>:
-    name: "CreateFirstNodeScreen"
-
-    Image:
-        source: app.assets.CREATE_FIRST_NODE_SCREEN
-        size_hint: 1,1
-        keep_ratio: False
-        allow_stretch: False
-
-    ImageButton:
-        id : Submit_btn
-        source: app.assets.SUBMIT_BTN
-        size_hint: 0.184, 0.07
-        keep_ratio: False
-        pos_hint: {'x':0.4,'y' : 0.29}
-        allow_stretch: False
-
-        on_release:
-            app.create_first_node()
-
-    TransTextInput:
-        id: username_wig
-        size_hint: 0.1667, 0.0416
-        pos_hint: {'x': 0.4375, 'y': 0.4444}
-
-    TransTextInput:
-        id: password_wig
-        size_hint: 0.1667, 0.0416
-        pos_hint: {'x': 0.4375, 'y': 0.4444}
-
-    TransTextInput:
-        id: port_for_nodes_wig
-        size_hint: 0.1667, 0.0416
-        pos_hint: {'x': 0.4375, 'y': 0.4444}
-
-    TransTextInput:
-        id: port_for_clients_wig
-        size_hint: 0.1667, 0.0416
-        pos_hint: {'x': 0.4375, 'y': 0.4444}
 
 
 
@@ -236,6 +201,20 @@ WindowManager:
         halign: 'left'
         valign: 'middle'
 
+    Label:
+        id: balance_label
+        size_hint: 0.2 , 0.05
+        pos_hint: {'x' : 0.4635 ,'y' : 0.56}
+        markup: True
+        text: ''
+        font_size: 30
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+
+
+
+
 
     RecantsTransactions:
         id : RecantsTransactions
@@ -250,6 +229,7 @@ WindowManager:
         allow_stretch: False
 
         on_release:
+            app.root.current = "SendScreen"
 
 
     ImageButton:
@@ -261,7 +241,141 @@ WindowManager:
         allow_stretch: False
 
         on_release:
+            app.root.current = "ReceiveScreen"
 
+
+    BackButton:
+
+
+
+<ReceiveScreen>
+    name: "ReceiveScreen"
+
+    Image:
+        source: app.assets.RECEIVE_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+    OfferedTransactions:
+        id: OfferedTransactions
+
+
+
+
+
+    BackButton:
+
+
+<FullReceiveScreen>:
+    name: "FullReceiveScreen"
+
+
+    Image:
+        source: app.assets.RECEIVE_FULL_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+
+    Label:
+        id: from_label
+        size_hint: 0.28125, 0.04629
+        pos_hint: {'x':0.411,'y':0.6111}
+        markup: True
+        text: ''
+        font_size: 32
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+
+    Label:
+        id: amount_label
+        size_hint: 0.203, 0.04629
+        pos_hint: {'x': 0.459, 'y': 0.4537}
+        markup: True
+        text: ''
+        font_size: 32
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+
+    Label:
+        id: description_label
+        size_hint: 0.338, 0.04629
+        pos_hint: {'x':0.3281,'y':0.1944}
+        markup: True
+        text: ''
+        font_size: 32
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+
+
+    ImageButton:
+        id : Decline_btn
+        source: app.assets.DECLINE_BTN
+        size_hint: 0.09375, 0.16667
+        keep_ratio: False
+        pos_hint: {'x':0.77,'y' : 0.2129}
+        allow_stretch: False
+
+        on_release:
+            app.decline()
+
+
+    ImageButton:
+        id : Receive_btn
+        source: app.assets.RECEIVE_BTN
+        size_hint: 0.09375, 0.16667
+        keep_ratio: False
+        pos_hint: {'x':0.77,'y' : 0.5278}
+        allow_stretch: False
+
+        on_release:
+            app.receive_coins()
+
+
+
+    BackButton:
+
+
+
+
+<SendScreen>:
+    name: "SendScreen"
+
+    Image:
+        source: app.assets.SEND_SCREEN
+        size_hint: 1,1
+        keep_ratio: False
+        allow_stretch: False
+
+    TransTextInput:
+        id: receiver_username_wig
+        size_hint: 0.28125, 0.04629
+        pos_hint: {'x': 0.25, 'y': 0.6111}
+
+    TransTextInput:
+        id: amount_wig
+        size_hint: 0.203, 0.04629
+        pos_hint: {'x': 0.3177, 'y': 0.4537}
+
+    TransTextInput:
+        id: description_wig
+        size_hint: 0.338, 0.04629
+        pos_hint: {'x': 0.2, 'y': 0.197}
+
+    ImageButton:
+        id : BigSend_btn
+        source: app.assets.BIG_SEND_BTN
+        size_hint: 0.151, 0.263889
+        keep_ratio: False
+        pos_hint: {'x':0.65625,'y' : 0.30555}
+        allow_stretch: False
+
+        on_release:
+            app.send_coins()
 
     BackButton:
 

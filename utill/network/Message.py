@@ -50,10 +50,11 @@ class MessageBetweenNodeAndClient:
             char = sock.recv(1).decode()
             msg += char
         msg = msg[:-1]  # remove last item -> '#'
-        self.message_type = MessageTypeBetweenNodeAndClient(int(msg[0]))
-        length = int(msg[1:])
+        type, l = msg.split('~')
+        self.message_type = MessageTypeBetweenNodeAndClient(int(type))
+        length = int(l)
         self.content = sock.recv(length).decode()
 
     def send(self, sock: socket.socket):
-        string_to_send = f'{self.message_type.value}{len(self.content)}#{self.content}'
+        string_to_send = f'{self.message_type.value}~{len(self.content)}#{self.content}'
         sock.send(string_to_send.encode())

@@ -343,16 +343,13 @@ class ServerDatabase:
             raise Exception(f'user that uploded block does not exist {block.uploader_username}\n{block.as_str()}')
         current_balance = self.users_table.get_balance(block.uploader_username)
         self.users_table.update_balance(block.uploader_username, current_balance + self.reward_for_block)
+        node.send_block_upload_to_clients_if_needed(block, self.reward_for_block)
         # }
 
         # TODO: handle all transactions {
         for transaction in block.list_of_transactions:
-            # TODO: write code that informs clients about transactions that had been processed
-            # TODO: and the inform them on unsigned transactions (aka a transaction request)
-
-            # temp{
             self.users_table.make_transaction(transaction)
-            # }
+            node.send_transaction_to_clients_if_needed(transaction)
 
         # }
         list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
@@ -543,21 +540,33 @@ class ServerDatabase:
         else:
             raise Exception('block has an unexpected amount of fathers')
 
-    def get_all_transactions_of(self, username: str)->list:
-        command = f'''SELECT LOT FROM Blockchain'''
+    def get_all_transactions_of(self, username: str):
+        command = f'''SELECT LOT FROM Blockchain WHERE SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()}'''
         list_to_send = []
         self.blockchain_table.cursor.execute(command)
         list_of_list_of_transactions = self.blockchain_table.cursor.fetchall()
-        for list_of_transactions in list_of_list_of_transactions:
-            list_of_transactions = json.loads(list_of_transactions)
-            list_of_transactions = [Transaction.create_from_str(string) for string in list_of_transactions]
+        print(f'len of all {len(list_of_list_of_transactions)}')
+        for tup in list_of_list_of_transactions:
+            list_of_transactions = json.loads(tup[0])
             for transaction in list_of_transactions:
+                transaction = Transaction.create_from_str(transaction)
                 if transaction.sender_username == username or transaction.receiver_username == username:
+                    if not self.users_table.is_user_exist(
+                            transaction.sender_username) or not self.users_table.is_user_exist(
+                            transaction.receiver_username):
+                        continue  # one of the users does not exist so so nothing
                     sender = self.users_table.get_user(transaction.sender_username)
                     receiver = self.users_table.get_user(transaction.receiver_username)
 
                     if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
-                        list_to_send.append(transaction)
+                        list_to_send.append(
+                            (transaction, MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED.value.__str__()))
                     elif transaction.receiver_username == username and transaction.is_sender_signature_valid(sender.pk):
-                        list_to_send.append(transaction)
-        return list_to_send
+                        list_to_send.append(
+                            (transaction, MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED.value.__str__()))
+
+        command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = '{username}' AND SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()} ;'''
+        self.blockchain_table.cursor.execute(command)
+        money_from_uploading_blocks = float(self.blockchain_table.cursor.fetchall()[0][0])
+
+        return list_to_send, money_from_uploading_blocks

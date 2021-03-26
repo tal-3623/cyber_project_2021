@@ -2,6 +2,7 @@ import hashlib
 import json
 import sqlite3
 
+from utill.blockchain.Transaction import Transaction
 from utill.encription.EncriptionKey import Key
 
 
@@ -17,7 +18,7 @@ class WalletDatabase:
             self.__cursor.execute(
                 f'''SELECT name FROM sqlite_master WHERE type='table' AND name='{self.__table_name}';''')
             result = len(self.__cursor.fetchall())
-            create_table_command = f'''CREATE TABLE  {self.__table_name} (Username VARCHAR(255),PasswordHash VARCHAR(256),PublicKey VARCHAR(256),PrivateKey JSON);'''
+            create_table_command = f'''CREATE TABLE  {self.__table_name} (Username VARCHAR(255),PasswordHash VARCHAR(256),PublicKey VARCHAR(256),PrivateKey JSON,LODT JSON);'''
             if result == 0:  # aka table does not exist
                 self.__cursor.execute(create_table_command)
             elif result == 1:
@@ -37,10 +38,29 @@ class WalletDatabase:
             password_sha_256 = hashlib.sha256(password.encode()).hexdigest()
             password_md5 = hashlib.md5(password.encode()).hexdigest()
             key_for_encryption = int(password_md5, base=16)
-            print('before', private_key.as_str())
             private_key_encrypted = json.dumps([ord(char) + key_for_encryption for char in private_key.as_str()])
-            command = f'''INSERT INTO Users (Username,PasswordHash,PublicKey,PrivateKey) VALUES ('{username}','{password_sha_256}','{public_key.as_str()}','{private_key_encrypted}')'''
-            print('eexexexeeeeeex')
+            command = f'''INSERT INTO Users (Username,PasswordHash,PublicKey,PrivateKey,LODT) VALUES ('{username}','{password_sha_256}','{public_key.as_str()}','{private_key_encrypted}','{json.dumps([])}')'''
+            self.__cursor.execute(command)
+            self.__connection.commit()
+
+        def get_list_of_declined_transactions(self, username: str):
+            """
+
+            :param username:
+            :return: the list such that every element is tran as str
+            """
+            command = f'''SELECT LODT FROM Users WHERE Username='{username}';'''
+            self.__cursor.execute(command)
+            list_of_tups = self.__cursor.fetchall()
+            tup = list_of_tups[0]
+            list_of_transaction = json.loads(tup[0])
+            return list_of_transaction
+
+        def add_declined_transaction(self, username: str, transaction: Transaction):
+            lodt = self.get_list_of_declined_transactions(username)
+            lodt.append(transaction.as_str())
+            lodt_as_str = json.dumps(lodt)
+            command = f'''UPDATE Users  SET LODT = '{lodt_as_str}' WHERE Username = '{username}';'''
             self.__cursor.execute(command)
             self.__connection.commit()
 
@@ -55,7 +75,7 @@ class WalletDatabase:
 
     def add_new_user(self, username: str, password: str, private_key: Key, public_key: Key):
         self.users_table.add_new_user(username, password, private_key, public_key)
-        # self.print_data()
+
 
     def is_user_exist(self, username: str) -> bool:
         self.__cursor.execute(f'''SELECT * FROM Users WHERE Username='{username}';''')
@@ -66,11 +86,8 @@ class WalletDatabase:
         self.__cursor.execute(f'''SELECT * FROM Users WHERE Username='{username}';''')
         rows = self.__cursor.fetchall()
         tup = rows[0]
-        username, real_password_hash, pk, sk = tup
-        print(tup)
+        username, real_password_hash, pk, sk, lodt = tup
         my_password_hash = hashlib.sha256(password.encode()).hexdigest()
-        print(my_password_hash)
-        print(real_password_hash)
         return my_password_hash == real_password_hash
 
     def get_keys(self, username: str, password: str):
@@ -79,9 +96,15 @@ class WalletDatabase:
         tup = rows[0]
         password_md5 = hashlib.md5(password.encode()).hexdigest()
         key_for_encryption = int(password_md5, base=16)
-        username, real_password_hash, pk, sk = tup
+        username, real_password_hash, pk, sk, lodt = tup
         pk = Key.create_from_str(pk)
         sk = json.loads(sk)
         sk = ''.join([chr(num - key_for_encryption) for num in sk])
         private_key = Key.create_from_str(sk)
         return pk, private_key
+
+    def get_list_of_declined_transactions(self, username: str):
+        return self.users_table.get_list_of_declined_transactions(username)
+
+    def add_declined_transaction(self, username: str, transaction: Transaction):
+        self.users_table.add_declined_transaction(username, transaction)

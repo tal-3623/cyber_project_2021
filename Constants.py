@@ -15,7 +15,7 @@ SOCKET_RECEIVE_TIMEOUT = 0.1
 
 # client{
 SOCKET_CLIENT_RECEIVE_LONG_TIMEOUT = 2
-SOCKET_CLIENT_RECEIVE_SHORT_TIMEOUT = 0.1
+SOCKET_CLIENT_RECEIVE_SHORT_TIMEOUT = 0.05
 # }
 
 
@@ -34,6 +34,8 @@ MAX_LEN_OF_LIST_OF_TRANSACTIONS = 50
 
 # }
 
+RECV_SCREEN_X_LEN = 50
+RECANTS_SCREEN_X_LEN = 30
 
 # {
 ALLOWED_CHARACTERS = []
@@ -83,3 +85,4 @@ class Files:
     BIG_SEND_BTN = __file_name__("BigSendBTN")
     RECEIVE_BTN = __file_name__("ReceiveBTN")
     SEND_BTN = __file_name__("SendBTN")
+    DECLINE_BTN = __file_name__("DeclineBTN")

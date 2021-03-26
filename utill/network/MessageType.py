@@ -32,4 +32,5 @@ class MessageTypeBetweenNodeAndClient(Enum):
     TRANSACTION_OFFERED = 10
     GET_ALL_TRANSACTIONS = 11
     RECEIVE_ALL_TRANSACTIONS = 12
+    BLOCK_UPLOADED = 13
     # }

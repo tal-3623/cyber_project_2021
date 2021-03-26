@@ -8,6 +8,7 @@ class CurrentUser:
         self.password = ''
         self.private_key = None
         self.public_key = None
+        self.balance = 0
 
     def set(self, username: str, password: str, private_key: Key, public_key: Key):
         self.username = username

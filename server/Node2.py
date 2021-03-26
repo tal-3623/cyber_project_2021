@@ -10,6 +10,7 @@ from server.AddBlockStatus import AddBlockStatus
 from server.ClientState import ClientState
 from server.ServerDatabase import ServerDatabase
 from utill.blockchain.Block import Block
+from utill.blockchain.Transaction import Transaction
 from utill.blockchain.User import User
 from utill.encription.EncriptionKey import Key
 from utill.network.Message import MessageBetweenNodes, MessageBetweenNodeAndClient
@@ -187,20 +188,26 @@ class Node:
                         print('LOGGED_IN')
                         msg = MessageBetweenNodeAndClient()
                         msg.recv(client_socket)
+                        print(msg.message_type)
                         if msg.message_type == MessageTypeBetweenNodeAndClient.GET_ALL_TRANSACTIONS:
+                            print('in GET_ALL_TRANSACTIONS')
                             # serch the database for all transactions revolving the user {
-                            list_of_transactions = self.server_database.get_all_transactions_of(username)
-                            content = json.dumps([tran.as_str() for tran in list_of_transactions])
+                            tuples, money_from_uploading_blocks = self.server_database.get_all_transactions_of(username)
+                            content = json.dumps(
+                                [[(t[0].as_str(), t[1]) for t in tuples], str(money_from_uploading_blocks)])
                             msg_to_send = MessageBetweenNodeAndClient(
                                 MessageTypeBetweenNodeAndClient.RECEIVE_ALL_TRANSACTIONS, content)
+                            print(f'sending msg {msg_to_send.message_type}, {msg_to_send.content}')
                             msg_to_send.send(client_socket)
                             # }
                         elif msg.message_type == MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED:
-                            pass
+                            print('in TRANSACTION_OFFERED\n', msg.content)
+                            transaction = Transaction.create_from_str(msg.content)
+                            self.list_of_transactions_to_make.append(transaction)
                         elif msg.message_type == MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED:
-                            pass
+                            transaction = Transaction.create_from_str(msg.content)
+                            self.list_of_transactions_to_make.append(transaction)
                     elif client_state == ClientState.WAITING_FOR_CONFIRMATION:
-                        print("WAITING_FOR_CONFIRMATION")
                         if self.dict_of_clients_and_usernames_waiting_for_confirmation.get(user) is None:
                             print('IS NONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                             client_socket.close()
@@ -209,7 +216,6 @@ class Node:
 
                     self.release()
                 except socket.timeout:
-                    print('time')
                     self.release()
 
 
@@ -218,8 +224,41 @@ class Node:
             self.release()
             return
 
-            # ----------------------------------------------------------------------------------
+    def send_transaction_to_clients_if_needed(self, transaction: Transaction):
+        for username in list(self.dict_of_clients_and_usernames.keys()):
+            if transaction.sender_username == username or transaction.receiver_username == username:
+                if not self.server_database.users_table.is_user_exist(
+                        transaction.sender_username) or not self.server_database.users_table.is_user_exist(
+                        transaction.receiver_username):
+                    return  # one of the users does not exist so so nothing
+                sender = self.server_database.users_table.get_user(transaction.sender_username)
+                receiver = self.server_database.users_table.get_user(transaction.receiver_username)
 
+                if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
+                    msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED,
+                                                      transaction.as_str())
+                elif transaction.receiver_username == username and transaction.is_sender_signature_valid(sender.pk):
+                    msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED,
+                                                      transaction.as_str())
+                else:
+                    continue
+
+                try:
+                    msg.send(self.dict_of_clients_and_usernames[username])
+                except ConnectionError:
+                    self.dict_of_clients_and_usernames.pop(username)
+
+    def send_block_upload_to_clients_if_needed(self, block: Block, reward_for_block: float):
+        for username in list(self.dict_of_clients_and_usernames.keys()):
+            if username == block.uploader_username:
+                content = str(reward_for_block)
+                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.BLOCK_UPLOADED, content)
+                try:
+                    msg.send(self.dict_of_clients_and_usernames[username])
+                except ConnectionError:
+                    self.dict_of_clients_and_usernames.pop(username)
+
+    # ----------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------
@@ -346,13 +385,13 @@ class Node:
                         break
 
                     # build block to upload {
-                    x = max(len(self.list_of_transactions_to_make),
+                    x = min(len(self.list_of_transactions_to_make),
                             MAX_LEN_OF_LIST_OF_TRANSACTIONS)
                     list_of_transactions_to_make = self.list_of_transactions_to_make[:x]  # all tran in this block
                     self.list_of_transactions_to_make_waiting_to_be_processed.extend(list_of_transactions_to_make)
                     self.list_of_transactions_to_make = self.list_of_transactions_to_make[x:]
 
-                    x = max(len(self.list_of_new_users_to_upload),
+                    x = min(len(self.list_of_new_users_to_upload),
                             MAX_LEN_OF_LIST_OF_NEW_USERS)
                     if not self.is_user_been_processed:
                         list_of_new_users_to_upload = [self.user]
@@ -365,6 +404,7 @@ class Node:
                     self.list_of_new_users_to_upload = self.list_of_new_users_to_upload[
                                                        x:]
 
+                    print(f'uploading block with {[t.as_str() for t in list_of_transactions_to_make]}')
                     last_block_hash = block.current_block_hash
                     self.block_to_upload = Block(self.username, list_of_transactions_to_make,
                                                  list_of_new_users_to_upload,

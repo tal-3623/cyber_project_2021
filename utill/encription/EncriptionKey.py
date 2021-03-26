@@ -92,6 +92,9 @@ class Key:
         return hashed
 
     def verify(self, signature: str, message: str):
+        if signature == '':
+            print('empty string')
+            return False
         signature = json.loads(signature)
         signature, is_successful = self.decrypt(signature)
         if not is_successful:

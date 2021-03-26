@@ -43,13 +43,6 @@ class Transaction:
         return Transaction(sender_username, receiver_username, amount, description, timestamp, sender_signature,
                            receiver_signature)
 
-    def to_string(self):
-        print(
-            f'{self.sender_username, self.receiver_username, self.amount, self.description, self.timestamp, self.sender_signature, self.receiver_signature}')
-
-    def __repr__(self):
-        return f'from {self.sender_username} to {self.receiver_username}, {self.amount} for {self.description} at {self.timestamp}'
-
     def is_signature_valid(self, sender_pk: Key, receiver_pk: Key):
         is_sender_signature_valid = self.is_sender_signature_valid(sender_pk)
         is_receiver_signature_valid = self.is_receiver_signature_valid(receiver_pk)
@@ -60,3 +53,6 @@ class Transaction:
 
     def is_receiver_signature_valid(self, receiver_pk: Key):
         return receiver_pk.verify(self.receiver_signature, self.data_as_str())
+
+    def __str__(self):
+        return f'from {self.sender_username} to {self.receiver_username}, {self.amount} for {self.description} at {self.timestamp}'
