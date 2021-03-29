@@ -34,8 +34,8 @@ MAX_LEN_OF_LIST_OF_TRANSACTIONS = 50
 
 # }
 
-RECV_SCREEN_X_LEN = 50
-RECANTS_SCREEN_X_LEN = 30
+RECV_SCREEN_X_LEN = 28
+RECANTS_SCREEN_X_LEN = 22
 
 # {
 ALLOWED_CHARACTERS = []
@@ -65,6 +65,8 @@ class Files:
     A const class that contains all the files paths.
     """
     KV_DES_FILE = __file_name__("wallet_des", format='.kv', path=str(Path.cwd() / 'res'))
+    DEF_FONT = __file_name__("Orion", format='.ttf', path=str(Path.cwd() / 'res'))
+
     MAIN_SCREEN = __file_name__("MAIN")
     CONNECT_SCREEN = __file_name__("connect")
     SIGN_UP_SCREEN = __file_name__("SignUp")

@@ -159,13 +159,13 @@ WindowManager:
 
     TransTextInput:
         id: username_wig
-        size_hint: 0.1667, 0.0416
-        pos_hint: {'x': 0.4375, 'y': 0.6044}
+        size_hint: 0.1667, 0.045
+        pos_hint: {'x': 0.4375, 'y': 0.59}
 
     TransTextInput:
         id: password_wig
-        size_hint: 0.1667, 0.0416
-        pos_hint: {'x': 0.4375, 'y': 0.4444}
+        size_hint: 0.1667, 0.045
+        pos_hint: {'x': 0.4375, 'y': 0.435}
 
     ImageButton:
         id : Submit_btn
@@ -200,6 +200,16 @@ WindowManager:
         text_size: self.size
         halign: 'left'
         valign: 'middle'
+        background_color : (0,0,0,0)
+        canvas.before:
+            Color:
+                rgba: self.background_color
+            Rectangle:
+                size:self.size
+                pos:self.pos
+        color: (0,0,0,1)
+
+
 
     Label:
         id: balance_label
@@ -208,9 +218,21 @@ WindowManager:
         markup: True
         text: ''
         font_size: 30
+        font_name: app.assets.DEF_FONT
+
         text_size: self.size
         halign: 'left'
         valign: 'middle'
+        background_color : (0,0,0,0)
+        canvas.before:
+            Color:
+                rgba: self.background_color
+            Rectangle:
+                size:self.size
+                pos:self.pos
+        color: (0,0,0,1)
+
+
 
 
 
@@ -280,14 +302,22 @@ WindowManager:
 
     Label:
         id: from_label
-        size_hint: 0.28125, 0.04629
-        pos_hint: {'x':0.411,'y':0.6111}
+        size_hint: 0.28125, 0.056
+        pos_hint: {'x':0.411,'y':0.615}
         markup: True
         text: ''
         font_size: 32
         text_size: self.size
         halign: 'left'
         valign: 'middle'
+        background_color : (0,0,0,0)
+        canvas.before:
+            Color:
+                rgba: self.background_color
+            Rectangle:
+                size:self.size
+                pos:self.pos
+        color: (0,0,0,1)
 
     Label:
         id: amount_label
@@ -299,6 +329,14 @@ WindowManager:
         text_size: self.size
         halign: 'left'
         valign: 'middle'
+        background_color : (0,0,0,0)
+        canvas.before:
+            Color:
+                rgba: self.background_color
+            Rectangle:
+                size:self.size
+                pos:self.pos
+        color: (0,0,0,1)
 
     Label:
         id: description_label
@@ -310,6 +348,14 @@ WindowManager:
         text_size: self.size
         halign: 'left'
         valign: 'middle'
+        background_color : (0,0,0,0)
+        canvas.before:
+            Color:
+                rgba: self.background_color
+            Rectangle:
+                size:self.size
+                pos:self.pos
+        color: (0,0,0,1)
 
 
     ImageButton:
@@ -398,9 +444,13 @@ WindowManager:
     size_hint: None, None
     pos_hint: {"right": 0.98, "bottom": 0.9}
     font_size: 46
+    font_name: app.assets.DEF_FONT
 
     on_release:
         app.pressed_back()
+
+
+
 
 
 
@@ -410,10 +460,13 @@ WindowManager:
     multiline: False
     foreground_color: (1,0,1,1)
     background_color: (0,0,0,0)
-    cursor_color: (1, 1, 1, 0.971)
+    cursor_color: (0.5, 0.5, 0.5, 0.971)
     cursor_width: 1
-    coulor: (1, 1, 1, 1)
+    coulor: (0, 0, 0, 1)
+
 
     canvas.before:
         Color:
             rgba: self.coulor
+
+

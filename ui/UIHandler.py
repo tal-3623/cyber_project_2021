@@ -11,6 +11,7 @@ from kivy.uix.scrollview import ScrollView
 
 import Constants
 from client.CurrentUser import CurrentUser
+from client.Notification import Notification
 from client.ParamsWaitingForConfirmation import ParamsWaitingForConfirmation
 from client.WalletDatabase import WalletDatabase
 from utill.blockchain.Transaction import Transaction
@@ -18,6 +19,7 @@ from utill.encription.EncriptionKey import Key
 from utill.network.Message import MessageBetweenNodeAndClient
 from utill.network.MessageType import MessageTypeBetweenNodeAndClient
 
+Config.set('graphics', 'resizable', False)
 Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 from kivy.app import App
 from kivy.core.window import Window
@@ -104,15 +106,14 @@ class CreateFirstNodeScreen(Screen):
 class TransactionLabel(ButtonBehavior, Label):
     def __init__(self, transaction: Transaction, **kwargs, ):
         super().__init__(**kwargs)
-        print(f'type is {type(transaction)}')
         self.transaction = transaction
         self.opacity = 1
 
-    # def on_press(self):
-    #     self.opacity = self.opacity+0.5
+    def on_press(self):
+        self.opacity = 0.5
 
-    # def on_release(self):
-    #     self.opacity = 0.2 if self.opacity == 1 else 1
+    def on_release(self):
+        self.opacity = 1
 
 
 def transform_into_multi_line(text: str, max_chars_in_line: int):
@@ -121,6 +122,7 @@ def transform_into_multi_line(text: str, max_chars_in_line: int):
     amount_of_lines = 1
     new_list = []
     for word in list_of_words:
+
         if len(word) + current_amount_of_chars + 1 > max_chars_in_line:
             word = '\n' + word
             current_amount_of_chars = 0
@@ -164,21 +166,17 @@ class OfferedTransactions(ScrollView):
                 self.clean()
 
         for tran in list_of_transactions:
-            print(f'tran type is {type(tran)} ,  {tran}')
             if tran in self.list_of_trans:
-                print('contniue')
                 continue
             text, amount_lines = transform_into_multi_line(str(tran), Constants.RECV_SCREEN_X_LEN)
-            widg = TransactionLabel(tran, text=text)
-            print(f'text is {widg.text}')
+            widg = TransactionLabel(tran, text=text, color=[0, 0, 0, 1])
             # widg.size_hint_y = None
             widg.font_size = 30
             widg.padding = (0, 0)
-            widg.height = amount_lines * (widg.font_size)
+            widg.height = amount_lines * (widg.font_size + 20)
             widg.valign = 'middle'
             widg.halign = 'left'
             widg.on_press = func_to_run_when_pressed(tran)
-            print(f'adding wig {widg.text}')
             # increment grid height
             self.grid.height += widg.height
             self.grid.add_widget(widg)
@@ -188,7 +186,6 @@ class OfferedTransactions(ScrollView):
         self.add_transactions(list_of_transactions, func_to_run_when_pressed)
 
     def clean(self):
-        print('clean')
         self.remove_widget(self.grid)
         self.__init__grid()
         self.list_of_trans = []
@@ -197,7 +194,7 @@ class OfferedTransactions(ScrollView):
 class RecantsTransactions(ScrollView):
     def __init__(self, **kwargs):
         super(RecantsTransactions, self).__init__(**kwargs)
-        self.bar_width = 30
+        self.bar_width = 10
         self.pos_hint = {'x': 0.3255, 'y': 0.041667}
         self.size_hint = (0.3333, 0.3379)
         self.scroll_type = ['bars']
@@ -210,10 +207,10 @@ class RecantsTransactions(ScrollView):
         self.grid = GridLayout()
         self.grid.size_hint_y = None
         self.grid.cols = 1
-        self.grid.spacing = 20
-        self.grid.padding = (0, 0)
+        self.grid.spacing = 60
+        self.grid.padding = (5, 0, 0, 0)
         self.grid.size_hint_x = 1.0
-        self.grid.row_default_height = '24dp'
+        # self.grid.row_default_height = '24dp'
         self.add_widget(self.grid)
         self.list_of_trans = []
 
@@ -222,18 +219,15 @@ class RecantsTransactions(ScrollView):
 
         for tran in list_of_transactions:
             if tran in self.list_of_trans:
-                print('contniue')
                 continue
             text, amount_lines = transform_into_multi_line(str(tran), Constants.RECANTS_SCREEN_X_LEN)
-            widg = TransactionLabel(tran, text=text)
-            print(f'text is {widg.text}')
+            widg = TransactionLabel(tran, text=text, color=[0, 0, 0, 1])
             # widg.size_hint_y = None
             widg.font_size = 30
             widg.padding = (0, 0)
-            widg.height = amount_lines * (widg.font_size)
+            widg.height = amount_lines * (widg.font_size + 45)
             widg.valign = 'middle'
             widg.halign = 'left'
-            print(f'adding wig {widg.text}')
             # increment grid height
             self.grid.height += widg.height
             self.grid.add_widget(widg)
@@ -243,7 +237,6 @@ class RecantsTransactions(ScrollView):
         self.add_transactions(list_of_transactions)
 
     def clean(self):
-        print('clean')
         self.remove_widget(self.grid)
         self.__init__grid()
 
@@ -272,6 +265,14 @@ class TransTextInput(TextInput):
 
 def check_if_input_is_empty(*args):
     return '' in args
+
+
+def Pop_notifications(notification: Notification, transaction_text: str = ''):
+    pop = Popup(title='new notification', content=Label(text=notification.value + '\n' + transaction_text),
+                size_hint=(0.5, 0.5),
+                pos_hint={'center_x': 0.5, 'center_y': 0.5})
+    pop.open()
+    del pop
 
 
 def PopUp_Invalid_input(text: str):
@@ -313,7 +314,7 @@ class WalletApp(App):
         self.my_socket.settimeout(0.1)
         try:
             self.my_socket.connect((ip, int(port)))
-        except socket.timeout:
+        except socket.timeout or ConnectionError:
             self.close_socket()
             PopUp_Invalid_input(f'could not connect to server \nip : {ip}\nport : {port}')
             return
@@ -326,7 +327,9 @@ class WalletApp(App):
 
     def build(self):
         self.title = "GOAT wallet"
-        Window.size = (1920, 1080)
+        y = 675
+        x = (16 / 9) * y
+        Window.size = (x, y)
         Window.fullscreen = False
         return self.kv_des
 
@@ -340,11 +343,9 @@ class WalletApp(App):
             try:
                 msg = MessageBetweenNodeAndClient()
                 msg.recv(self.my_socket)
-                print(f'{msg.message_type.name}, {msg.content}')
                 if msg.message_type == MessageTypeBetweenNodeAndClient.SIGN_UP_CONFIRMED:
                     # after the user has been processed{
                     pass  # TODO: add the new user to the db
-                    print(f'adding to db{username, password, private_key, public_key}')
                     self.wallet_database.add_new_user(username, password, private_key, public_key)
                     # TODO: log into into the user
                     # }
@@ -354,7 +355,6 @@ class WalletApp(App):
                     self.pressed_back()
 
             except socket.timeout:
-                print('paass')
                 pass
 
             except ConnectionError:
@@ -375,16 +375,19 @@ class WalletApp(App):
             elif self.root.current == "SignUpScreen":
                 self.root.current = "MenuScreen"
                 self.close_socket()
+                self.current_user.clear()
                 self.root.ids.SignUpScreen.clear_text()
             elif self.root.current == "LogInScreen":
                 self.root.current = "MenuScreen"
                 self.close_socket()
+                self.current_user.clear()
                 self.root.ids.LogInScreen.clear_text()
             elif self.root.current == "WaitingForConfirmationScreen":
                 self.root.current = "MenuScreen"
                 self.close_socket()
             elif self.root.current == "UserPageScreen":
                 self.root.current = "MenuScreen"
+                self.current_user.clear()
                 self.close_socket()
             elif self.root.current in ["ReceiveScreen", "FullReceiveScreen", "SendScreen"]:
                 self.root.current = "UserPageScreen"
@@ -396,18 +399,16 @@ class WalletApp(App):
 
     def close_socket(self):
         self.my_socket.close()
-        print('close')
         self.my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.my_socket.settimeout(Constants.SOCKET_CLIENT_RECEIVE_LONG_TIMEOUT)
 
     def log_in(self):
-        print('hererererer')
         username = self.root.ids.LogInScreen.ids.username_wig.text
         password = self.root.ids.LogInScreen.ids.password_wig.text
         # username = 'g'
         # password = '1'
-        self.root.ids.SignUpScreen.ids.username_wig.text = ""
-        self.root.ids.SignUpScreen.ids.password_wig.text = ""
+        self.root.ids.LogInScreen.ids.username_wig.text = ""
+        self.root.ids.LogInScreen.ids.password_wig.text = ""
         if check_if_input_is_empty(username, password):
             PopUp_Invalid_input('fill out user and password')
         elif not check_username_validity(username):
@@ -417,7 +418,6 @@ class WalletApp(App):
         elif not self.wallet_database.check_if_password_valid(username, password):
             PopUp_Invalid_input(f'wrong password')
         else:  # password and user correct
-            print('password and user correct')
             current_username = username
             current_password = password
             current_pk, current_private_key = self.wallet_database.get_keys(username, password)
@@ -431,9 +431,8 @@ class WalletApp(App):
                 msg.send(self.my_socket)
 
                 msg = MessageBetweenNodeAndClient()
-                print('reciving msg')
+
                 msg.recv(self.my_socket)
-                print(f'msg is {msg.message_type}, {msg.content}')
 
                 if msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_FAILED:
                     PopUp_Invalid_input('login failed')
@@ -443,16 +442,13 @@ class WalletApp(App):
                 elif msg.message_type != MessageTypeBetweenNodeAndClient.LOG_IN_RAND:
                     raise Exception('unxpected msg')
 
-                print(f'bla {self.current_user.private_key}')
                 signature = self.current_user.private_key.sign(msg.content)
 
                 msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_RAND_ANSWER, signature)
                 msg.send(self.my_socket)
 
                 msg = MessageBetweenNodeAndClient()
-                print('reciving')
                 msg.recv(self.my_socket)
-                print(f'msg is {msg.message_type}, {msg.content}')
 
                 if msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_ACCEPTED:
                     self.root.current = "UserPageScreen"
@@ -463,21 +459,19 @@ class WalletApp(App):
                     self.my_socket.settimeout(Constants.SOCKET_CLIENT_RECEIVE_SHORT_TIMEOUT)
                     Clock.schedule_interval(self.recv_msg_from_server, 1)
                     # }
-                    print(repr(self.current_user))
                 elif msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_FAILED:
                     PopUp_Invalid_input('login failed')
                     self.pressed_back()
                 else:
                     raise Exception('nfds')
-            except ConnectionError:
-                PopUp_Invalid_input('server  off')
+            except ConnectionError or socket.timeout:
+                PopUp_Invalid_input(f'connection with server failed')
                 self.pressed_back()
             # }
 
     def sign_up(self):
         username = self.root.ids.SignUpScreen.ids.username_wig.text
         password = self.root.ids.SignUpScreen.ids.password_wig.text
-        print('usernmae', username, 'pass', password)
         self.root.ids.SignUpScreen.ids.username_wig.text = ""
         self.root.ids.SignUpScreen.ids.password_wig.text = ""
         if check_if_input_is_empty(username, password):
@@ -495,12 +489,10 @@ class WalletApp(App):
                 msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.SIGN_UP, content)
                 try:
                     self.my_socket.settimeout(2)
-                    print(f'sending {msg.message_type.name}, {msg.content}')
                     msg.send(self.my_socket)
 
                     msg = MessageBetweenNodeAndClient()
                     msg.recv(self.my_socket)
-                    print(f'recv {msg.message_type.name}, {msg.content}')
                 except ConnectionError as e:
                     PopUp_Invalid_input("server went offline")
                     self.pressed_back()
@@ -517,8 +509,6 @@ class WalletApp(App):
                     continue
                 else:
                     break
-
-            print('waiting for conformation')
 
             self.root.current = "WaitingForConfirmationScreen"
             # TODO: wait to get conformation from server that the user has been processed
@@ -540,7 +530,10 @@ class WalletApp(App):
         :return:
         """
 
-        print(f'balance before {self.current_user.balance}')
+        print('before', self.current_user.balance)
+        if transaction:
+            print(transaction.sender_username, transaction.receiver_username,
+                  transaction.amount)
         if amount is not None:
             self.current_user.balance += amount
         elif self.current_user.username == transaction.sender_username:
@@ -549,20 +542,22 @@ class WalletApp(App):
             self.current_user.balance += transaction.amount
         else:
             raise Exception('im not the sender nor the receiver')
+
+        print('after', self.current_user.balance)
         # update gui {
         self.root.ids.UserPageScreen.ids.balance_label.text = str(round(self.current_user.balance, 5))
         # }
-        print(f'balance after {self.current_user.balance}')
 
     def process_transaction(self, transaction: Transaction, type: MessageTypeBetweenNodeAndClient):
-        print(
-            f'in process tran {transaction.sender_username} to {transaction.receiver_username} amount {transaction.amount}')
-
+        print(f'processing {transaction.as_str()}')
+        print(f'reciver {transaction.receiver_username}')
+        print(f'giver {transaction.sender_username}')
         if type == MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED:
+            print('tran complete')
             self.update_balance(transaction=transaction)
             self.list_of_completed_transactions.append(transaction)
             if transaction.__str__() in self.dict_of_repr_to_offered_transactions.keys():
-                print('removing ->', self.dict_of_repr_to_offered_transactions.pop(transaction.__str__()))
+                self.dict_of_repr_to_offered_transactions.pop(transaction.__str__())
             self.root.ids.UserPageScreen.ids.RecantsTransactions.update_grid(self.list_of_completed_transactions)
             self.root.ids.ReceiveScreen.ids.OfferedTransactions.update_grid(
                 self.dict_of_repr_to_offered_transactions.values(), self.move_to_receive_full_screen)
@@ -578,15 +573,15 @@ class WalletApp(App):
 
     def recv_msg_from_server(self, *args):
         self.acquire()
+        print(self.current_user.username)
         if self.root.current in ["UserPageScreen", "SendScreen", "FullReceiveScreen",
                                  "ReceiveScreen"]:  # TODO add all needed screens
             try:
                 msg = MessageBetweenNodeAndClient()
                 msg.recv(self.my_socket)
-                print(f'received {msg.message_type}', msg.content)
                 if msg.message_type == MessageTypeBetweenNodeAndClient.RECEIVE_ALL_TRANSACTIONS:
-                    print('in RECEIVE_ALL_TRANSACTIONS')
                     list_of_transactions, money_from_uploading_blocks = json.loads(msg.content)
+                    print(float(money_from_uploading_blocks), "money_from_uploading_blocks")
                     list_of_transactions = [
                         (Transaction.create_from_str(tup[0]), MessageTypeBetweenNodeAndClient(int(tup[1]))) for tup in
                         list_of_transactions]
@@ -597,6 +592,7 @@ class WalletApp(App):
                                           MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED]:
                     tran = Transaction.create_from_str(msg.content)
                     self.process_transaction(tran, msg.message_type)
+                    Pop_notifications(Notification.create(msg.message_type), transaction_text=tran.__str__())
                 elif msg.message_type == MessageTypeBetweenNodeAndClient.BLOCK_UPLOADED:
                     amount = float(msg.content)
                     self.update_balance(amount=amount)
@@ -607,7 +603,7 @@ class WalletApp(App):
                 self.release()
                 return
             except ConnectionError:
-                print('server dissconected')  # TODO
+                PopUp_Invalid_input('server dissconected')
                 self.root.current = "MenuScreen"
                 self.close_socket()
                 self.current_user.clear()
@@ -642,7 +638,6 @@ class WalletApp(App):
 
         try:
             msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED, transaction.as_str())
-            print(f'sending {msg.message_type} , {msg.content}')
             msg.send(self.my_socket)
         except ConnectionError:
             self.back_to_menu()
@@ -664,7 +659,6 @@ class WalletApp(App):
         msg_to_send = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED,
                                                   self.current_transaction.as_str())
         try:
-            print(f'sending {msg_to_send.message_type}', msg_to_send.content)
             msg_to_send.send(self.my_socket)
             self.pressed_back()
         except ConnectionError:
@@ -672,7 +666,6 @@ class WalletApp(App):
         # }
 
     def decline(self):
-        print(self.dict_of_repr_to_offered_transactions)
         self.wallet_database.add_declined_transaction(self.current_user.username, self.current_transaction)
         self.dict_of_repr_to_offered_transactions.pop(self.current_transaction.__str__())
         self.root.ids.ReceiveScreen.ids.OfferedTransactions.update_grid(

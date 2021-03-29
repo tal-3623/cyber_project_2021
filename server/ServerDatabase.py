@@ -4,6 +4,7 @@ import sqlite3
 import threading
 
 from server.AddBlockStatus import AddBlockStatus
+from utill.TailRecurseOptimization import tail_call_optimized
 from utill.blockchain.Block import Block
 from utill.blockchain.Transaction import Transaction
 from utill.blockchain.User import User
@@ -83,7 +84,7 @@ class ServerDatabase:
 
         def calculate_security_number_threshold(self) -> int:
             # TODO
-            return 20
+            return 12
 
         def __insert_block_just_to_memory(self, block: Block):
             """used only in create table func """
@@ -381,6 +382,7 @@ class ServerDatabase:
                         pass
                     # }
 
+    @tail_call_optimized
     def add_block(self, block: Block, node) -> AddBlockStatus:
         """
         all the checking is using the memory table but every change is being done to both tables
@@ -388,12 +390,11 @@ class ServerDatabase:
         :param block: the block to add to the database
         :return: a string that says what happened inside the function
         """
-        print("add block")
+        # print("add block")
         # check if block hash match  {
         if block.current_block_hash != block.compute_hash():
             print('invalid hash')
             return AddBlockStatus.INVALID_BLOCK
-
         # }
 
         # check if block is duplicated{
@@ -553,7 +554,7 @@ class ServerDatabase:
                 if transaction.sender_username == username or transaction.receiver_username == username:
                     if not self.users_table.is_user_exist(
                             transaction.sender_username) or not self.users_table.is_user_exist(
-                            transaction.receiver_username):
+                        transaction.receiver_username):
                         continue  # one of the users does not exist so so nothing
                     sender = self.users_table.get_user(transaction.sender_username)
                     receiver = self.users_table.get_user(transaction.receiver_username)
@@ -567,6 +568,6 @@ class ServerDatabase:
 
         command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = '{username}' AND SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()} ;'''
         self.blockchain_table.cursor.execute(command)
-        money_from_uploading_blocks = float(self.blockchain_table.cursor.fetchall()[0][0])
+        money_from_uploading_blocks = float(self.blockchain_table.cursor.fetchall()[0][0] * self.reward_for_block)
 
         return list_to_send, money_from_uploading_blocks

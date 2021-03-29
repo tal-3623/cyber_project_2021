@@ -21,6 +21,7 @@ class CurrentUser:
         self.password = ''
         self.private_key = None
         self.public_key = None
+        self.balance = 0
 
     def __repr__(self):
         return f'username {self.username}\npassword {self.password}'

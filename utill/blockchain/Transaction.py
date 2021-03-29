@@ -55,4 +55,4 @@ class Transaction:
         return receiver_pk.verify(self.receiver_signature, self.data_as_str())
 
     def __str__(self):
-        return f'from {self.sender_username} to {self.receiver_username}, {self.amount} for {self.description} at {self.timestamp}'
+        return f'from {self.sender_username} to {self.receiver_username}, amount: {self.amount}, description: {self.description}, time: {self.timestamp}'

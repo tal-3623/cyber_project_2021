@@ -113,7 +113,7 @@ class Node:
                 t = threading.Thread(target=self.handle_node, args=(sock, node_address,))
                 t.start()
 
-        except ConnectionRefusedError or socket.timeout as e:
+        except ConnectionRefusedError or ConnectionError or socket.timeout as e:
             print(e)
             print("the server to connect through is offline!")
             # TODO decide what to do when the  server to connect through is offline
@@ -134,7 +134,6 @@ class Node:
                         msg.recv(client_socket)
 
                         client_socket.settimeout(SOCKET_CLIENT_RECEIVE_LONG_TIMEOUT)
-                        print(f'current msg {msg.message_type.name}, {msg.content}')
                         if msg.message_type == MessageTypeBetweenNodeAndClient.SIGN_UP:
                             list_of_data = json.loads(msg.content)
                             username, pk_as_str = list_of_data
@@ -155,10 +154,9 @@ class Node:
                                 self.dict_of_clients_and_usernames_waiting_for_confirmation[user] = client_socket
                                 client_state = ClientState.WAITING_FOR_CONFIRMATION
                             else:
-                                print('continue')
+                                pass
                         elif msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_REQUEST:
                             username = msg.content
-                            print(f'user {username}')
                             if not self.server_database.users_table.is_user_exist(username):
                                 print(f'not user named {username}')
                                 msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_FAILED)
@@ -169,7 +167,6 @@ class Node:
                             msg.send(client_socket)
 
                             msg.recv(client_socket)
-                            print(f'164 -> {msg.message_type.name}')
                             if msg.message_type != MessageTypeBetweenNodeAndClient.LOG_IN_RAND_ANSWER:
                                 raise Exception('unxpexted msg')
                             client_pk = self.server_database.users_table.get_public_key(username)
@@ -185,23 +182,19 @@ class Node:
                             raise Exception('unxpexted msg')
 
                     elif client_state == ClientState.LOGGED_IN:
-                        print('LOGGED_IN')
                         msg = MessageBetweenNodeAndClient()
                         msg.recv(client_socket)
-                        print(msg.message_type)
                         if msg.message_type == MessageTypeBetweenNodeAndClient.GET_ALL_TRANSACTIONS:
-                            print('in GET_ALL_TRANSACTIONS')
                             # serch the database for all transactions revolving the user {
                             tuples, money_from_uploading_blocks = self.server_database.get_all_transactions_of(username)
+                            print(f'money from blocks {money_from_uploading_blocks} (190)')
                             content = json.dumps(
                                 [[(t[0].as_str(), t[1]) for t in tuples], str(money_from_uploading_blocks)])
                             msg_to_send = MessageBetweenNodeAndClient(
                                 MessageTypeBetweenNodeAndClient.RECEIVE_ALL_TRANSACTIONS, content)
-                            print(f'sending msg {msg_to_send.message_type}, {msg_to_send.content}')
                             msg_to_send.send(client_socket)
                             # }
                         elif msg.message_type == MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED:
-                            print('in TRANSACTION_OFFERED\n', msg.content)
                             transaction = Transaction.create_from_str(msg.content)
                             self.list_of_transactions_to_make.append(transaction)
                         elif msg.message_type == MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED:
@@ -209,7 +202,6 @@ class Node:
                             self.list_of_transactions_to_make.append(transaction)
                     elif client_state == ClientState.WAITING_FOR_CONFIRMATION:
                         if self.dict_of_clients_and_usernames_waiting_for_confirmation.get(user) is None:
-                            print('IS NONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                             client_socket.close()
                             self.release()
                             return
@@ -221,6 +213,7 @@ class Node:
 
         except ConnectionError as e:
             print(e)
+            print('nlafsdfdsfdsfds')
             self.release()
             return
 
@@ -229,7 +222,7 @@ class Node:
             if transaction.sender_username == username or transaction.receiver_username == username:
                 if not self.server_database.users_table.is_user_exist(
                         transaction.sender_username) or not self.server_database.users_table.is_user_exist(
-                        transaction.receiver_username):
+                    transaction.receiver_username):
                     return  # one of the users does not exist so so nothing
                 sender = self.server_database.users_table.get_user(transaction.sender_username)
                 receiver = self.server_database.users_table.get_user(transaction.receiver_username)
@@ -303,7 +296,7 @@ class Node:
         new_block_as_tup = json.loads(content)
         new_block = Block.create_block_from_tuple_received(new_block_as_tup)
         add_block_result = self.server_database.add_block(new_block, self)
-        print(f"add_block_result (in new) {add_block_result.name}")
+        # print(f"add_block_result (in new) {add_block_result.name}")
         if add_block_result == AddBlockStatus.INVALID_BLOCK:
             pass
         elif add_block_result == AddBlockStatus.ORPHAN_BLOCK:
@@ -340,7 +333,6 @@ class Node:
                     elif msg.message_type == MessageTypeBetweenNodes.NewConnection:
                         address = self.handle_new_connection(msg.content, address)
                     else:
-                        print(msg.message_type, msg.content)
                         raise Exception('unexpected message')
                     self.release()
                 except socket.timeout:
@@ -357,7 +349,6 @@ class Node:
 
     def find_proof_of_work_and_upload_block(self):
         self.acquire()
-        print(312)
         block = self.server_database.blockchain_table.block_to_calc_proof_of_work
         proof_of_work_difficulty = self.server_database.proof_of_work_difficulty
         self.release()
@@ -404,7 +395,7 @@ class Node:
                     self.list_of_new_users_to_upload = self.list_of_new_users_to_upload[
                                                        x:]
 
-                    print(f'uploading block with {[t.as_str() for t in list_of_transactions_to_make]}')
+                    # print(f'uploading block with {[t.as_str() for t in list_of_transactions_to_make]}')
                     last_block_hash = block.current_block_hash
                     self.block_to_upload = Block(self.username, list_of_transactions_to_make,
                                                  list_of_new_users_to_upload,
@@ -425,7 +416,7 @@ class Node:
                             try:
                                 msg_to_send.send(sock)
                             except Exception as e:
-                                print(e)
+                                pass
                             # TODO: send new block message
                     self.block_to_upload = None
                     self.release()
@@ -443,9 +434,7 @@ class Node:
             # add a client
             try:
                 client_socket, address = socket_for_clients.accept()
-                print('new cliwntt')
                 self.acquire()
-                print(404)
                 # self.dict_of_clients_and_usernames
                 t = threading.Thread(target=self.handle_client, args=(client_socket,))
                 t.start()

@@ -50,7 +50,11 @@ class MessageBetweenNodeAndClient:
             char = sock.recv(1).decode()
             msg += char
         msg = msg[:-1]  # remove last item -> '#'
-        type, l = msg.split('~')
+        print(msg)
+        try:
+            type, l = msg.split('~')
+        except ValueError:
+            raise ConnectionError
         self.message_type = MessageTypeBetweenNodeAndClient(int(type))
         length = int(l)
         self.content = sock.recv(length).decode()
