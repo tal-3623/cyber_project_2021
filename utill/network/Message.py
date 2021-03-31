@@ -1,5 +1,7 @@
 import socket
+from datetime import datetime
 
+from Constants import MSG_SEPARATOR, END_MSG
 from utill.network.MessageType import MessageTypeBetweenNodes, MessageTypeBetweenNodeAndClient
 
 
@@ -10,24 +12,24 @@ class MessageBetweenNodes:
 
     def recv(self, sock: socket.socket):
         msg = ''
-        char = sock.recv(1).decode()
-        if len(char) == 0:
-            print("ConnectionError")
-            raise ConnectionError
-        msg += char
-        while char != '#':
+        while True:
+            char = sock.recv(1).decode()
             if len(char) == 0:
                 print("ConnectionError")
                 raise ConnectionError
-            char = sock.recv(1).decode()
-            msg += char
-        msg = msg[:-1]  # remove last item -> '#'
-        self.message_type = MessageTypeBetweenNodes(int(msg[0]))
-        length = int(msg[1:])
-        self.content = sock.recv(length).decode()
+            elif char == END_MSG:
+                break
+            else:
+                msg += char
+        self.message_type, self.content = msg.split(MSG_SEPARATOR)
+        self.message_type = MessageTypeBetweenNodes(int(self.message_type))  # convert to enum
+        print('rreerre')
+        print(f'####################\n', self.message_type.name, '\n', self.content, '\n####################')
 
     def send(self, sock: socket.socket):
-        string_to_send = f'{self.message_type.value}{len(self.content)}#{self.content}'
+        print('rreerre')
+        print(datetime.now())
+        string_to_send = f'{self.message_type.value}{MSG_SEPARATOR}{self.content}{END_MSG}'
         sock.send(string_to_send.encode())
 
 
@@ -36,29 +38,52 @@ class MessageBetweenNodeAndClient:
         self.message_type = message_type
         self.content = content
 
+    # def recv(self, sock: socket.socket):
+    #     msg = ''
+    #     char = sock.recv(1).decode()
+    #     if len(char) == 0:
+    #         print("ConnectionError")
+    #         raise ConnectionError
+    #     msg += char
+    #     while char != '#':
+    #         if len(char) == 0:
+    #             print("ConnectionError")
+    #             raise ConnectionError
+    #         char = sock.recv(1).decode()
+    #         msg += char
+    #     msg = msg[:-1]  # remove last item -> '#'
+    #     print(msg)
+    #     try:
+    #         type, l = msg.split('~')
+    #     except ValueError:
+    #         raise ConnectionError
+    #     self.message_type = MessageTypeBetweenNodeAndClient(int(type))
+    #     length = int(l)
+    #     if length == 0:
+    #         return
+    #     t = sock.gettimeout()
+    #     sock.settimeout(10)
+    #     self.content = sock.recv(length).decode()
+    #     sock.settimeout(t)
+
     def recv(self, sock: socket.socket):
         msg = ''
-        char = sock.recv(1).decode()
-        if len(char) == 0:
-            print("ConnectionError")
-            raise ConnectionError
-        msg += char
-        while char != '#':
+        while True:
+            char = sock.recv(1).decode()
             if len(char) == 0:
                 print("ConnectionError")
                 raise ConnectionError
-            char = sock.recv(1).decode()
-            msg += char
-        msg = msg[:-1]  # remove last item -> '#'
-        print(msg)
-        try:
-            type, l = msg.split('~')
-        except ValueError:
-            raise ConnectionError
-        self.message_type = MessageTypeBetweenNodeAndClient(int(type))
-        length = int(l)
-        self.content = sock.recv(length).decode()
+            elif char == END_MSG:
+                break
+            else:
+                msg += char
+        self.message_type, self.content = msg.split(MSG_SEPARATOR)
+        self.message_type = MessageTypeBetweenNodeAndClient(int(self.message_type))  # convert to enum
+        print('rreerre')
+        print(f'####################\n',self.message_type.name,'\n',self.content,'\n####################')
 
     def send(self, sock: socket.socket):
-        string_to_send = f'{self.message_type.value}~{len(self.content)}#{self.content}'
+        print('rreerre')
+        print(datetime.now())
+        string_to_send = f'{self.message_type.value}{MSG_SEPARATOR}{self.content}{END_MSG}'
         sock.send(string_to_send.encode())

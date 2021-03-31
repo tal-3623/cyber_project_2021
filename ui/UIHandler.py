@@ -314,6 +314,7 @@ class WalletApp(App):
         self.my_socket.settimeout(0.1)
         try:
             self.my_socket.connect((ip, int(port)))
+            print('after connect')
         except socket.timeout or ConnectionError:
             self.close_socket()
             PopUp_Invalid_input(f'could not connect to server \nip : {ip}\nport : {port}')

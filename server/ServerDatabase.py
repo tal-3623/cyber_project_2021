@@ -567,7 +567,11 @@ class ServerDatabase:
                             (transaction, MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED.value.__str__()))
 
         command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = '{username}' AND SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()} ;'''
+        # command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = '{username}' ;'''
+
         self.blockchain_table.cursor.execute(command)
-        money_from_uploading_blocks = float(self.blockchain_table.cursor.fetchall()[0][0] * self.reward_for_block)
+        b = self.blockchain_table.cursor.fetchall()[0][0] * self.reward_for_block
+        print(f'before float {b}')
+        money_from_uploading_blocks = float(b)
 
         return list_to_send, money_from_uploading_blocks

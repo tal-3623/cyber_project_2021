@@ -293,6 +293,7 @@ class Node:
             raise Exception(f'got get block msg for a block that i dont have a father')
 
     def handle_new_block(self, content: str, socket: socket.socket):
+        print(content)
         new_block_as_tup = json.loads(content)
         new_block = Block.create_block_from_tuple_received(new_block_as_tup)
         add_block_result = self.server_database.add_block(new_block, self)
