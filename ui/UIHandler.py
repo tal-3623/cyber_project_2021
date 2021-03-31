@@ -549,13 +549,14 @@ class WalletApp(App):
         self.root.ids.UserPageScreen.ids.balance_label.text = str(round(self.current_user.balance, 5))
         # }
 
-    def process_transaction(self, transaction: Transaction, type: MessageTypeBetweenNodeAndClient):
+    def process_transaction(self, transaction: Transaction, type: MessageTypeBetweenNodeAndClient, change_balance=True):
         print(f'processing {transaction.as_str()}')
         print(f'reciver {transaction.receiver_username}')
         print(f'giver {transaction.sender_username}')
         if type == MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED:
             print('tran complete')
-            self.update_balance(transaction=transaction)
+            if change_balance:
+                self.update_balance(transaction=transaction)
             self.list_of_completed_transactions.append(transaction)
             if transaction.__str__() in self.dict_of_repr_to_offered_transactions.keys():
                 self.dict_of_repr_to_offered_transactions.pop(transaction.__str__())
@@ -581,14 +582,14 @@ class WalletApp(App):
                 msg = MessageBetweenNodeAndClient()
                 msg.recv(self.my_socket)
                 if msg.message_type == MessageTypeBetweenNodeAndClient.RECEIVE_ALL_TRANSACTIONS:
-                    list_of_transactions, money_from_uploading_blocks = json.loads(msg.content)
-                    print(float(money_from_uploading_blocks), "money_from_uploading_blocks")
+                    list_of_transactions, current_amount_of_money = json.loads(msg.content)
+                    print(float(current_amount_of_money), "current_amount_of_money")
                     list_of_transactions = [
                         (Transaction.create_from_str(tup[0]), MessageTypeBetweenNodeAndClient(int(tup[1]))) for tup in
                         list_of_transactions]
                     for tup in list_of_transactions:
-                        self.process_transaction(tup[0], tup[1])  # (transaction,msg_type)
-                    self.update_balance(amount=float(money_from_uploading_blocks))
+                        self.process_transaction(tup[0], tup[1], change_balance=False)  # (transaction,msg_type)
+                    self.update_balance(amount=float(current_amount_of_money))
                 elif msg.message_type in [MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED,
                                           MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED]:
                     tran = Transaction.create_from_str(msg.content)

@@ -186,10 +186,10 @@ class Node:
                         msg.recv(client_socket)
                         if msg.message_type == MessageTypeBetweenNodeAndClient.GET_ALL_TRANSACTIONS:
                             # serch the database for all transactions revolving the user {
-                            tuples, money_from_uploading_blocks = self.server_database.get_all_transactions_of(username)
-                            print(f'money from blocks {money_from_uploading_blocks} (190)')
+                            tuples, current_amount_of_money = self.server_database.get_all_transactions_of(username)
+                            print(f'current_amount_of_money {current_amount_of_money} (190)')
                             content = json.dumps(
-                                [[(t[0].as_str(), t[1]) for t in tuples], str(money_from_uploading_blocks)])
+                                [[(t[0].as_str(), t[1]) for t in tuples], str(current_amount_of_money)])
                             msg_to_send = MessageBetweenNodeAndClient(
                                 MessageTypeBetweenNodeAndClient.RECEIVE_ALL_TRANSACTIONS, content)
                             msg_to_send.send(client_socket)
@@ -293,7 +293,7 @@ class Node:
             raise Exception(f'got get block msg for a block that i dont have a father')
 
     def handle_new_block(self, content: str, socket: socket.socket):
-        print(content)
+        print('296', content)
         new_block_as_tup = json.loads(content)
         new_block = Block.create_block_from_tuple_received(new_block_as_tup)
         add_block_result = self.server_database.add_block(new_block, self)
@@ -356,8 +356,11 @@ class Node:
         while True:
 
             target = 2 ** (256 - proof_of_work_difficulty)
+            print(f'frec is {(2 ** proof_of_work_difficulty) // PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY}')
             for nonce in range(MAX_NONCE):
-                if nonce % PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY == 0:
+                if nonce % (2 ** proof_of_work_difficulty) // PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY == 0:  # 2^diff =
+                    # average amount of tries before success,PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY is how many times to
+                    # check if it took the avg tries
                     self.acquire()
                     if block != self.server_database.blockchain_table.block_to_calc_proof_of_work:
                         self.block_to_upload = None
@@ -369,6 +372,7 @@ class Node:
                 hash_result = hashlib.sha256(input_to_hash.encode()).hexdigest()
 
                 if int(hash_result, 16) < target:
+                    print(nonce, 'nonce is !!')
                     self.acquire()
                     if block != self.server_database.blockchain_table.block_to_calc_proof_of_work:
                         self.block_to_upload = None

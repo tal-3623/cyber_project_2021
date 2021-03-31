@@ -23,13 +23,12 @@ class MessageBetweenNodes:
                 msg += char
         self.message_type, self.content = msg.split(MSG_SEPARATOR)
         self.message_type = MessageTypeBetweenNodes(int(self.message_type))  # convert to enum
-        print('rreerre')
+
         print(f'####################\n', self.message_type.name, '\n', self.content, '\n####################')
 
     def send(self, sock: socket.socket):
-        print('rreerre')
-        print(datetime.now())
         string_to_send = f'{self.message_type.value}{MSG_SEPARATOR}{self.content}{END_MSG}'
+        print('sending',self.message_type.name,self.content,string_to_send)
         sock.send(string_to_send.encode())
 
 
@@ -83,7 +82,5 @@ class MessageBetweenNodeAndClient:
         print(f'####################\n',self.message_type.name,'\n',self.content,'\n####################')
 
     def send(self, sock: socket.socket):
-        print('rreerre')
-        print(datetime.now())
         string_to_send = f'{self.message_type.value}{MSG_SEPARATOR}{self.content}{END_MSG}'
         sock.send(string_to_send.encode())

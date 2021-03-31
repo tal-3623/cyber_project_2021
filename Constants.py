@@ -25,8 +25,10 @@ SOCKET_CLIENT_RECEIVE_SHORT_TIMEOUT = 0.05
 
 
 # proof of work{
+STARTING_REWARD_FOR_BLOCK = 2.0
 MAX_NONCE = 2 ** 32  # 4 billion
-PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY = 10000
+PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY = 10
+CHANGE_REWARD_FOR_BLOCK_FREQUENCY = 500
 # }
 
 # encription {
@@ -35,21 +37,22 @@ KEY_BIT_LEN = 64
 
 # block {
 MAX_LEN_OF_LIST_OF_NEW_USERS = 50
-MAX_LEN_OF_LIST_OF_TRANSACTIONS = 50
+MAX_LEN_OF_LIST_OF_TRANSACTIONS = 20
 
 # }
 
+
+# GUI{
 RECV_SCREEN_X_LEN = 28
 RECANTS_SCREEN_X_LEN = 22
+# }
 
 # {
-ALLOWED_CHARACTERS = []
-ALLOWED_CHARACTERS.extend(string.ascii_lowercase)
-ALLOWED_CHARACTERS.extend(string.ascii_uppercase)
-ALLOWED_CHARACTERS.extend(string.digits)
-print(f"FORBIDDEN_CHARACTERS\n{ALLOWED_CHARACTERS}")
-
-
+# ALLOWED_CHARACTERS = []
+# ALLOWED_CHARACTERS.extend(string.ascii_lowercase)
+# ALLOWED_CHARACTERS.extend(string.ascii_uppercase)
+# ALLOWED_CHARACTERS.extend(string.digits)
+# print(f"FORBIDDEN_CHARACTERS\n{ALLOWED_CHARACTERS}")
 # }
 
 def __file_name__(name: str, format='.png', path=str(str(Path.cwd() / 'res' / 'des'))) -> str:

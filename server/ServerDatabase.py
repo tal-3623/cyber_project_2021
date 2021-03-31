@@ -3,6 +3,7 @@ import json
 import sqlite3
 import threading
 
+from Constants import CHANGE_REWARD_FOR_BLOCK_FREQUENCY, STARTING_REWARD_FOR_BLOCK
 from server.AddBlockStatus import AddBlockStatus
 from utill.TailRecurseOptimization import tail_call_optimized
 from utill.blockchain.Block import Block
@@ -20,6 +21,7 @@ class ServerDatabase:
             self.__connection = connection
             self.__table_name = 'GeneralVariables'
             self.__last_level_processed = 0
+            self.__current_reward = STARTING_REWARD_FOR_BLOCK
             self.__create_table()
 
         def __create_table(self):
@@ -28,27 +30,38 @@ class ServerDatabase:
             result = len(self.__cursor.fetchall())
 
             if result == 0:  # aka table does not exist
-                create_table_command = f'''CREATE TABLE  {self.__table_name} (LLP INTEGER);'''
+                create_table_command = f'''CREATE TABLE  {self.__table_name} (LLP INTEGER,CR DOUBLE(4,10));'''
                 self.__cursor.execute(create_table_command)
-                command = f'''INSERT INTO {self.__table_name} VALUES (0)'''
+                command = f'''INSERT INTO {self.__table_name} VALUES (0,{STARTING_REWARD_FOR_BLOCK})'''
                 self.__cursor.execute(command)
                 self.__last_level_processed = 0  # default
+                self.__current_reward = STARTING_REWARD_FOR_BLOCK
             elif result == 1:
-                self.__cursor.execute(f'''SELECT LLP FROM {self.__table_name}''')
+                self.__cursor.execute(f'''SELECT LLP,CR FROM {self.__table_name}''')
                 rows = self.__cursor.fetchall()
                 if len(rows) == 0:
-                    command = f'''INSERT INTO {self.__table_name} VALUES (0)'''
+                    command = f'''INSERT INTO {self.__table_name} VALUES (0,{STARTING_REWARD_FOR_BLOCK})'''
                     self.__cursor.execute(command)
                     self.__last_level_processed = 0  # default
+                    self.__current_reward = STARTING_REWARD_FOR_BLOCK
                 elif len(rows) != 1:
                     raise Exception('more then one row')
                 else:
                     self.__last_level_processed = rows[0][0]
+                    self.__current_reward = rows[0][1]
             else:
                 raise Exception('dup tables')
 
         def get_last_level_processed(self) -> int:
             return self.__last_level_processed
+
+        def get_current_reward_for_block(self) -> float:
+            return self.__current_reward
+
+        def half_reward_for_block(self):
+            self.__current_reward /= 2
+            command = f'''UPDATE {self.__table_name} SET CR = {self.__current_reward / 2}'''
+            self.__cursor.execute(command)
 
         def set_last_level_processed(self, level: int):
             self.__last_level_processed = level
@@ -220,7 +233,6 @@ class ServerDatabase:
             try:
                 return rows[0][0]
             except Exception as e:
-                print(rows)
                 raise e
 
         def get_user(self, username: str):
@@ -301,8 +313,7 @@ class ServerDatabase:
         self.blockchain_table = self.BlockchainTable(self.__cursor, self.__connection, self.__memory_cursor,
                                                      self.__memory_connection, self.general_val_table)
 
-        self.reward_for_block = 2  # TODO: currntly a temp value need to calculacte
-        self.proof_of_work_difficulty = 17  # TODO: currntly a temp value need to calculacte
+        self.proof_of_work_difficulty = 15  # TODO: currntly a temp value need to calculacte
         self.pow_target = 12  # TODO: currntly a temp value need to calculacte
 
     def connect_to_db(self):
@@ -323,17 +334,6 @@ class ServerDatabase:
         self.__connection.close()
         self.__memory_connection.close()
 
-    def print_data(self):
-        command = f'''SELECT * FROM Blockchain'''
-        self.__cursor.execute(command)
-        self.__memory_cursor.execute(command)
-        result = self.__cursor.fetchall()
-        result_memory = self.__memory_cursor.fetchall()
-        command = f'''SELECT  * FROM Users'''
-        self.__cursor.execute(command)
-        result_users = self.__cursor.fetchall()
-        print(f'result {result}\nresult_memory {result_memory}\nresult_users {result_users}')
-
     def process_block(self, block: Block, node):
         """
         this function will be called every time a block has passed the threshold to be considered secure
@@ -343,8 +343,12 @@ class ServerDatabase:
         in order to solve situations that the uploader is a new user
         :return:
         """
+
         if block.uploader_username == 'genesis':
             return
+
+        if block.level % CHANGE_REWARD_FOR_BLOCK_FREQUENCY == 0:  # aka the time to half the reward has come
+            self.general_val_table.half_reward_for_block()
 
             # add all new users{
         for user in block.list_of_new_users:
@@ -355,16 +359,19 @@ class ServerDatabase:
         if not self.users_table.is_user_exist(block.uploader_username):
             raise Exception(f'user that uploded block does not exist {block.uploader_username}\n{block.as_str()}')
         current_balance = self.users_table.get_balance(block.uploader_username)
-        self.users_table.update_balance(block.uploader_username, current_balance + self.reward_for_block)
-        node.send_block_upload_to_clients_if_needed(block, self.reward_for_block)
+        self.users_table.update_balance(block.uploader_username,
+                                        current_balance + self.general_val_table.get_current_reward_for_block())
+        node.send_block_upload_to_clients_if_needed(block, self.general_val_table.get_current_reward_for_block())
         # }
 
         # TODO: handle all transactions {
         for transaction in block.list_of_transactions:
+            if len(block.list_of_transactions)>1:
+                pass
             self.users_table.make_transaction(transaction)
             node.send_transaction_to_clients_if_needed(transaction)
-
         # }
+
         list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
         list_of_new_users_as_str = [user.as_str() for user in block.list_of_new_users]
 
@@ -382,12 +389,10 @@ class ServerDatabase:
                                                                          tran.as_str() not in list_of_transactions_as_str]
             for user in list(node.dict_of_clients_and_usernames_waiting_for_confirmation.keys()):
                 if user.as_str() in list_of_new_users_as_str:
-                    print(f'user confirmed {user.as_str()}')
                     # send to the client that is waiting for confirmation that his user has been successfully uploaded{
                     client_socket = node.dict_of_clients_and_usernames_waiting_for_confirmation[user]
                     msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.SIGN_UP_CONFIRMED)
                     node.dict_of_clients_and_usernames_waiting_for_confirmation.pop(user)  # remove
-                    print(f'sending {msg.message_type.name}, {msg.content}')
                     try:
                         msg.send(client_socket)
                     except ConnectionError:
@@ -402,7 +407,6 @@ class ServerDatabase:
         :param block: the block to add to the database
         :return: a string that says what happened inside the function
         """
-        # print("add block")
         # check if block hash match  {
         if block.current_block_hash != block.compute_hash():
             print('invalid hash')
@@ -414,8 +418,6 @@ class ServerDatabase:
             f'''SELECT * FROM Blockchain WHERE CBH = '{block.current_block_hash}' ''')
         list_of_blocks_with_same_hash = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_blocks_with_same_hash) != 0:
-            print(
-                f'-------\n{block.current_block_hash}\n{block.last_block_hash}\n{len(list_of_blocks_with_same_hash)}\n--------------------')
             print(f'dup block: {block.as_str()}')
             return AddBlockStatus.INVALID_BLOCK  # duplicated block
         # }
@@ -533,9 +535,6 @@ class ServerDatabase:
                     command = f'''DELETE FROM Blockchain WHERE Level <= {block_to_process.level} '''
                     self.blockchain_table.memory_cursor.execute(command)
                 else:
-                    print(len_of_list_of_blocks_that_need_to_be_processed)
-                    for i in list_of_blocks_that_need_to_be_processed:
-                        print(Block.create_block_from_tuple(i).as_str())
                     raise Exception('more then one block has passed the threshold')
                 # }
             elif len(list_of_brothers) > 1:  # aka i am not the first son
@@ -554,11 +553,13 @@ class ServerDatabase:
             raise Exception('block has an unexpected amount of fathers')
 
     def get_all_transactions_of(self, username: str):
+        if not self.users_table.is_user_exist(username):
+            return [], -1
+
         command = f'''SELECT LOT FROM Blockchain WHERE SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()}'''
         list_to_send = []
         self.blockchain_table.cursor.execute(command)
         list_of_list_of_transactions = self.blockchain_table.cursor.fetchall()
-        print(f'len of all {len(list_of_list_of_transactions)}')
         for tup in list_of_list_of_transactions:
             list_of_transactions = json.loads(tup[0])
             for transaction in list_of_transactions:
@@ -578,11 +579,6 @@ class ServerDatabase:
                         list_to_send.append(
                             (transaction, MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED.value.__str__()))
 
-        command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = ? AND SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()} ;'''
+        current_amount_of_money = float(self.users_table.get_balance(username))
 
-        self.blockchain_table.cursor.execute(command, (username,))
-        b = self.blockchain_table.cursor.fetchall()[0][0] * self.reward_for_block
-        print(f'before float {b}')
-        money_from_uploading_blocks = float(b)
-
-        return list_to_send, money_from_uploading_blocks
+        return list_to_send, current_amount_of_money
