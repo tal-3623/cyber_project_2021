@@ -24,7 +24,7 @@ class ServerDatabase:
 
         def __create_table(self):
             self.__cursor.execute(
-                f'''SELECT name FROM sqlite_master WHERE type='table' AND name='{self.__table_name}';''')
+                f'''SELECT name FROM sqlite_master WHERE type='table' AND name=? ;''', (self.__table_name,))
             result = len(self.__cursor.fetchall())
 
             if result == 0:  # aka table does not exist
@@ -91,8 +91,11 @@ class ServerDatabase:
             list_of_new_users_as_str = [user.as_str() for user in block.list_of_new_users]
             list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
 
-            command = f'''INSERT INTO Blockchain VALUES ({block.id},{block.parent_id},{block.sequence_number},{block.level},{block.security_number},"{block.uploader_username}","{block.last_block_hash}","{block.current_block_hash}","{block.proof_of_work}","{block.timestamp}",'{json.dumps(list_of_transactions_as_str)}','{json.dumps(list_of_new_users_as_str)}')'''
-            self.memory_cursor.execute(command)
+            command = f'''INSERT INTO Blockchain VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'''
+            self.memory_cursor.execute(command, (
+                block.id, block.parent_id, block.sequence_number, block.level, block.security_number,
+                block.uploader_username, block.last_block_hash, block.current_block_hash, block.proof_of_work,
+                block.timestamp, json.dumps(list_of_transactions_as_str), json.dumps(list_of_new_users_as_str)))
 
         def insert_block(self, block: Block):
             """
@@ -104,9 +107,18 @@ class ServerDatabase:
             list_of_new_users_as_str = [user.as_str() for user in block.list_of_new_users]
             list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]
 
-            command = f'''INSERT INTO Blockchain VALUES ({block.id},{block.parent_id},{block.sequence_number},{block.level},{block.security_number},"{block.uploader_username}","{block.last_block_hash}","{block.current_block_hash}","{block.proof_of_work}","{block.timestamp}",'{json.dumps(list_of_transactions_as_str)}','{json.dumps(list_of_new_users_as_str)}')'''
-            self.cursor.execute(command)
-            self.memory_cursor.execute(command)
+            command = f'''INSERT INTO Blockchain VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'''
+
+            self.cursor.execute(command, (
+                block.id, block.parent_id, block.sequence_number, block.level, block.security_number,
+                block.uploader_username, block.last_block_hash, block.current_block_hash, block.proof_of_work,
+                block.timestamp, json.dumps(list_of_transactions_as_str), json.dumps(list_of_new_users_as_str)))
+
+            self.memory_cursor.execute(command, (
+                block.id, block.parent_id, block.sequence_number, block.level, block.security_number,
+                block.uploader_username, block.last_block_hash, block.current_block_hash, block.proof_of_work,
+                block.timestamp, json.dumps(list_of_transactions_as_str), json.dumps(list_of_new_users_as_str)))
+
             self.current_block_id += 1
 
         def increase_block_security_number(self, blocks_id: int):
@@ -203,7 +215,7 @@ class ServerDatabase:
                 f'''CREATE TABLE IF NOT EXISTS {self.table_name} (Username varchar(256) UNIQUE,PublicKey varchar(256) UNIQUE,Balance DOUBLE({self.MAX_BALANCE_DIGIT_LEN}, {self.MAX_BALANCE_DIGIT_LEN_AFTER_DOT}));''')
 
         def get_balance(self, username: str) -> float:
-            self.cursor.execute(f'''SELECT Balance FROM {self.table_name} WHERE Username='{username}';''')
+            self.cursor.execute(f'''SELECT Balance FROM {self.table_name} WHERE Username=?;''', (username,))
             rows = self.cursor.fetchall()
             try:
                 return rows[0][0]
@@ -212,44 +224,44 @@ class ServerDatabase:
                 raise e
 
         def get_user(self, username: str):
-            command = f'''SELECT * FROM {self.table_name} WHERE Username  = '{username}' '''
-            self.cursor.execute(command)
+            command = f'''SELECT * FROM {self.table_name} WHERE Username  = ? '''
+            self.cursor.execute(command, (username,))
             tup = self.cursor.fetchall()[0]
             return User(tup[0], Key.create_from_str(tup[1]), float(tup[2]))
 
         def is_user_exist(self, username) -> bool:
-            self.cursor.execute(f'''SELECT * FROM {self.table_name} WHERE Username='{username}';''')
+            self.cursor.execute(f'''SELECT * FROM {self.table_name} WHERE Username=?;''', (username,))
             rows = self.cursor.fetchall()
             return not len(rows) == 0
 
         def is_public_key_exist(self, pk: Key):
-            self.cursor.execute(f'''SELECT * FROM {self.table_name} WHERE PublicKey='{pk.as_str()}';''')
+            self.cursor.execute(f'''SELECT * FROM {self.table_name} WHERE PublicKey=?;''', (pk.as_str(),))
             rows = self.cursor.fetchall()
             return not len(rows) == 0
 
         def get_public_key(self, username: str) -> Key:
-            self.cursor.execute(f'''SELECT PublicKey FROM {self.table_name} WHERE Username='{username}';''')
+            self.cursor.execute(f'''SELECT PublicKey FROM {self.table_name} WHERE Username=?;''', (username,))
             rows = self.cursor.fetchall()
             return Key.create_from_str(rows[0][0])
 
         def add_user(self, user: User):
-            s = f'''INSERT INTO {self.table_name} (Username, PublicKey, Balance) VALUES('{user.username}','{user.pk.as_str()}',
-            '{user.balance}');'''
+            s = f'''INSERT INTO {self.table_name} (Username, PublicKey, Balance) VALUES(?,?,
+            ?);'''
             try:
-                self.cursor.execute(s)
+                self.cursor.execute(s, (user.username, user.pk.as_str(), user.balance))  # TODO check
             except sqlite3.IntegrityError as e:
                 print(f'username {user.username},pk {user.pk.as_str()}, balance {user.balance}')
                 print(e)
                 pass
 
         def update_balance(self, username: str, new_balance):
-            s = f'''UPDATE {self.table_name} SET Balance = {new_balance} WHERE Username = '{username}' '''
-            self.cursor.execute(s)
+            s = f'''UPDATE {self.table_name} SET Balance = {new_balance} WHERE Username = ? '''
+            self.cursor.execute(s, (username,))
 
         def make_transaction(self, transaction: Transaction):
             if not self.is_user_exist(transaction.receiver_username) or not self.is_user_exist(
-                    transaction.sender_username):
-                return  # one of the user does not exist
+                    transaction.sender_username) or transaction.receiver_username == transaction.sender_username:
+                return  # one of the user does not exist or the receiver_username is also  sender_username
 
             sender = self.get_user(transaction.sender_username)
             receiver = self.get_user(transaction.receiver_username)
@@ -566,10 +578,9 @@ class ServerDatabase:
                         list_to_send.append(
                             (transaction, MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED.value.__str__()))
 
-        command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = '{username}' AND SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()} ;'''
-        # command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = '{username}' ;'''
+        command = f'''SELECT COUNT(UploaderUsername) FROM Blockchain WHERE UploaderUsername = ? AND SecurityNumber > {self.blockchain_table.calculate_security_number_threshold()} ;'''
 
-        self.blockchain_table.cursor.execute(command)
+        self.blockchain_table.cursor.execute(command, (username,))
         b = self.blockchain_table.cursor.fetchall()[0][0] * self.reward_for_block
         print(f'before float {b}')
         money_from_uploading_blocks = float(b)

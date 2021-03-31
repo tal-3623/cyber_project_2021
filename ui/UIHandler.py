@@ -633,6 +633,14 @@ class WalletApp(App):
         except ValueError:
             PopUp_Invalid_input('amount should be a a valid number')
             return
+
+        if self.current_user.balance < amount:
+            PopUp_Invalid_input('not enough money')
+            return
+
+        if self.current_user.username == receiver_username:
+            PopUp_Invalid_input('cannot send money to yourself')
+            return
         transaction = Transaction(self.current_user.username, receiver_username, amount, description)
         signature = self.current_user.private_key.sign(transaction.data_as_str())
         transaction.sender_signature = signature
