@@ -14,7 +14,7 @@ from utill.blockchain.Transaction import Transaction
 from utill.blockchain.User import User
 from utill.encription.EncriptionKey import Key
 from utill.network.Message import MessageBetweenNodes, MessageBetweenNodeAndClient
-from utill.network.MessageType import MessageTypeBetweenNodes, MessageTypeBetweenNodeAndClient
+from utill.network.MessageType import MessageType
 
 
 class Node:
@@ -83,7 +83,7 @@ class Node:
             temp_sock.connect(node_address)
 
             # TODO send newServerDataRequest
-            msg = MessageBetweenNodes(MessageTypeBetweenNodes.newServerDataRequest, str(self.__port_for_nodes))
+            msg = MessageBetweenNodes(MessageType.newServerDataRequest, str(self.__port_for_nodes))
             msg.send(temp_sock)
 
             # TODO receive newServerDataTransfer
@@ -91,7 +91,7 @@ class Node:
             msg = MessageBetweenNodes()
             msg.recv(temp_sock)
             # TODO add all the the other nodes to list of nodes
-            if msg.message_type != MessageTypeBetweenNodes.newServerDataTransfer:
+            if msg.message_type != MessageType.newServerDataTransfer:
                 raise Exception('got a diifrent msg then expected')
             nodes_address_received = json.loads(msg.content)
 
@@ -106,7 +106,7 @@ class Node:
                 sock = socket.socket()
                 sock.connect(node_address)
                 # TODO check : sends new connction msg
-                msg = MessageBetweenNodes(MessageTypeBetweenNodes.NewConnection, str(self.__port_for_nodes))
+                msg = MessageBetweenNodes(MessageType.NewConnection, str(self.__port_for_nodes))
                 msg.send(sock)
                 self.list_of_nodes_address.append(node_address)
                 self.list_of_nodes_sockets.append(sock)
@@ -134,7 +134,7 @@ class Node:
                         msg.recv(client_socket)
 
                         client_socket.settimeout(SOCKET_CLIENT_RECEIVE_LONG_TIMEOUT)
-                        if msg.message_type == MessageTypeBetweenNodeAndClient.SIGN_UP:
+                        if msg.message_type == MessageType.SIGN_UP:
                             list_of_data = json.loads(msg.content)
                             username, pk_as_str = list_of_data
                             pk = Key.create_from_str(pk_as_str)
@@ -142,7 +142,7 @@ class Node:
                             is_user_taken = self.server_database.users_table.is_user_exist(username)
                             is_pk_taken = self.server_database.users_table.is_public_key_exist(pk)
                             content = str(int(is_user_taken)) + str(int(is_pk_taken))
-                            msg_to_send = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.SIGN_UP_ANSWER,
+                            msg_to_send = MessageBetweenNodeAndClient(MessageType.SIGN_UP_ANSWER,
                                                                       content)
                             msg_to_send.send(client_socket)
                             # }
@@ -155,25 +155,25 @@ class Node:
                                 client_state = ClientState.WAITING_FOR_CONFIRMATION
                             else:
                                 pass
-                        elif msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_REQUEST:
+                        elif msg.message_type == MessageType.LOG_IN_REQUEST:
                             username = msg.content
                             if not self.server_database.users_table.is_user_exist(username):
                                 print(f'not user named {username}')
-                                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_FAILED)
+                                msg = MessageBetweenNodeAndClient(MessageType.LOG_IN_FAILED)
                                 msg.send(client_socket)
 
                             random = str(randint(0, 10000))
-                            msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_RAND, random)
+                            msg = MessageBetweenNodeAndClient(MessageType.LOG_IN_RAND, random)
                             msg.send(client_socket)
 
                             msg.recv(client_socket)
-                            if msg.message_type != MessageTypeBetweenNodeAndClient.LOG_IN_RAND_ANSWER:
+                            if msg.message_type != MessageType.LOG_IN_RAND_ANSWER:
                                 raise Exception('unxpexted msg')
                             client_pk = self.server_database.users_table.get_public_key(username)
                             if not client_pk.verify(msg.content, random):
-                                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_FAILED)
+                                msg = MessageBetweenNodeAndClient(MessageType.LOG_IN_FAILED)
                             else:
-                                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_ACCEPTED)
+                                msg = MessageBetweenNodeAndClient(MessageType.LOG_IN_ACCEPTED)
                             msg.send(client_socket)
                             client_socket.settimeout(SOCKET_CLIENT_RECEIVE_SHORT_TIMEOUT)
                             self.dict_of_clients_and_usernames[username] = client_socket
@@ -184,20 +184,20 @@ class Node:
                     elif client_state == ClientState.LOGGED_IN:
                         msg = MessageBetweenNodeAndClient()
                         msg.recv(client_socket)
-                        if msg.message_type == MessageTypeBetweenNodeAndClient.GET_ALL_TRANSACTIONS:
+                        if msg.message_type == MessageType.GET_ALL_TRANSACTIONS:
                             # serch the database for all transactions revolving the user {
                             tuples, current_amount_of_money = self.server_database.get_all_transactions_of(username)
                             print(f'current_amount_of_money {current_amount_of_money} (190)')
                             content = json.dumps(
                                 [[(t[0].as_str(), t[1]) for t in tuples], str(current_amount_of_money)])
                             msg_to_send = MessageBetweenNodeAndClient(
-                                MessageTypeBetweenNodeAndClient.RECEIVE_ALL_TRANSACTIONS, content)
+                                MessageType.RECEIVE_ALL_TRANSACTIONS, content)
                             msg_to_send.send(client_socket)
                             # }
-                        elif msg.message_type == MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED:
+                        elif msg.message_type == MessageType.TRANSACTION_OFFERED:
                             transaction = Transaction.create_from_str(msg.content)
                             self.list_of_transactions_to_make.append(transaction)
-                        elif msg.message_type == MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED:
+                        elif msg.message_type == MessageType.TRANSACTION_COMPLETED:
                             transaction = Transaction.create_from_str(msg.content)
                             self.list_of_transactions_to_make.append(transaction)
                     elif client_state == ClientState.WAITING_FOR_CONFIRMATION:
@@ -228,10 +228,10 @@ class Node:
                 receiver = self.server_database.users_table.get_user(transaction.receiver_username)
 
                 if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
-                    msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED,
+                    msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_COMPLETED,
                                                       transaction.as_str())
                 elif transaction.receiver_username == username and transaction.is_sender_signature_valid(sender.pk):
-                    msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED,
+                    msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_OFFERED,
                                                       transaction.as_str())
                 else:
                     continue
@@ -245,7 +245,7 @@ class Node:
         for username in list(self.dict_of_clients_and_usernames.keys()):
             if username == block.uploader_username:
                 content = str(reward_for_block)
-                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.BLOCK_UPLOADED, content)
+                msg = MessageBetweenNodeAndClient(MessageType.BLOCK_UPLOADED, content)
                 try:
                     msg.send(self.dict_of_clients_and_usernames[username])
                 except ConnectionError:
@@ -278,7 +278,7 @@ class Node:
                 continue
             address_list.append(node)
         json_string = json.dumps(address_list)
-        msg = MessageBetweenNodes(message_type=MessageTypeBetweenNodes.newServerDataTransfer, content=json_string)
+        msg = MessageBetweenNodes(message_type=MessageType.newServerDataTransfer, content=json_string)
         msg.send(sock)
         return address
 
@@ -287,7 +287,7 @@ class Node:
         father = self.server_database.blockchain_table.get_father(block_received)
         if father is not None:
             content = father.as_str_to_send()
-            msg = MessageBetweenNodes(MessageTypeBetweenNodes.NewBlock, content)
+            msg = MessageBetweenNodes(MessageType.NewBlock, content)
             msg.send(socket)
         else:
             raise Exception(f'got get block msg for a block that i dont have a father')
@@ -302,7 +302,7 @@ class Node:
             pass
         elif add_block_result == AddBlockStatus.ORPHAN_BLOCK:
             content = new_block.as_str_to_send()
-            msg = MessageBetweenNodes(MessageTypeBetweenNodes.getBlocks, content)  # TODO send get blocks
+            msg = MessageBetweenNodes(MessageType.getBlocks, content)  # TODO send get blocks
             msg.send(socket)
         else:
             pass
@@ -323,18 +323,19 @@ class Node:
                     self.acquire()
                     msg = MessageBetweenNodes()
                     msg.recv(node_socket)
-                    if msg.message_type == MessageTypeBetweenNodes.newServerDataRequest:
+                    if msg.message_type == MessageType.newServerDataRequest:
                         address = self.handle_new_server_data_request(msg.content, node_socket, address)
-                    elif msg.message_type == MessageTypeBetweenNodes.LogOff:
+                    elif msg.message_type == MessageType.LogOff:
                         self.handle_log_off(msg.content)  # TODO log off
-                    elif msg.message_type == MessageTypeBetweenNodes.getBlocks:
+                    elif msg.message_type == MessageType.getBlocks:
                         self.handle_get_blocks(msg.content, node_socket)  # TODO get blocks
-                    elif msg.message_type == MessageTypeBetweenNodes.NewBlock:
+                    elif msg.message_type == MessageType.NewBlock:
                         self.handle_new_block(msg.content, node_socket)  # TODO: new block
-                    elif msg.message_type == MessageTypeBetweenNodes.NewConnection:
+                    elif msg.message_type == MessageType.NewConnection:
                         address = self.handle_new_connection(msg.content, address)
                     else:
-                        raise Exception('unexpected message')
+                        # raise Exception('unexpected message')
+                        print('unexpected message')
                     self.release()
                 except socket.timeout:
                     self.release()
@@ -344,8 +345,11 @@ class Node:
             # remove node from list of online nodes
             print(f' self.list_of_nodes_address {self.list_of_nodes_address}')
             print(f'adress {address}')
-            self.list_of_nodes_address.remove(address)
-            self.list_of_nodes_sockets.remove(node_socket)
+            try:
+                self.list_of_nodes_address.remove(address)
+                self.list_of_nodes_sockets.remove(node_socket)
+            except ValueError:
+                print('351 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             self.release()
 
     def find_proof_of_work_and_upload_block(self):
@@ -416,7 +420,7 @@ class Node:
                         Exception('i uploaded orphan')
                     elif result == AddBlockStatus.SUCCESSFUL:
                         content = self.block_to_upload.as_str_to_send()
-                        msg_to_send = MessageBetweenNodes(MessageTypeBetweenNodes.NewBlock, content)
+                        msg_to_send = MessageBetweenNodes(MessageType.NewBlock, content)
                         for sock in self.list_of_nodes_sockets:
                             try:
                                 msg_to_send.send(sock)

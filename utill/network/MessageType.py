@@ -1,7 +1,8 @@
 from enum import Enum
 
 
-class MessageTypeBetweenNodes(Enum):
+class MessageType(Enum):
+    # MessageType{
     NewBlock = 0
     newServerDataRequest = 1
     newServerDataTransfer = 2
@@ -9,28 +10,64 @@ class MessageTypeBetweenNodes(Enum):
     sendBlocks = 4
     LogOff = 5
     NewConnection = 6
+    # }
 
-
-class MessageTypeBetweenNodeAndClient(Enum):
+    # MessageTypeBetweenNodeAndClient{
     # log in{
-    LOG_IN_REQUEST = 0
-    LOG_IN_RAND = 1
-    LOG_IN_RAND_ANSWER = 2
-    LOG_IN_ACCEPTED = 3
-    LOG_IN_FAILED = 4
+    LOG_IN_REQUEST = 7
+    LOG_IN_RAND = 8
+    LOG_IN_RAND_ANSWER = 9
+    LOG_IN_ACCEPTED = 10
+    LOG_IN_FAILED = 11
     # }
 
     # sign up{
-    SIGN_UP = 5
-    SIGN_UP_ANSWER = 6
-    SIGN_UP_CONFIRMED = 7
-    SIGN_UP_FAILED = 8
+    SIGN_UP = 12
+    SIGN_UP_ANSWER = 13
+    SIGN_UP_CONFIRMED = 14
+    SIGN_UP_FAILED = 15
     # }
 
     # transactions{
-    TRANSACTION_COMPLETED = 9
-    TRANSACTION_OFFERED = 10
-    GET_ALL_TRANSACTIONS = 11
-    RECEIVE_ALL_TRANSACTIONS = 12
-    BLOCK_UPLOADED = 13
+    TRANSACTION_COMPLETED = 16
+    TRANSACTION_OFFERED = 17
+    GET_ALL_TRANSACTIONS = 18
+    RECEIVE_ALL_TRANSACTIONS = 19
+    BLOCK_UPLOADED = 20
     # }
+    # }
+
+
+# class MessageType(Enum):
+#     NewBlock = 0
+#     newServerDataRequest = 1
+#     newServerDataTransfer = 2
+#     getBlocks = 3
+#     sendBlocks = 4
+#     LogOff = 5
+#     NewConnection = 6
+
+
+# class MessageType(Enum):
+#     # log in{
+#     LOG_IN_REQUEST = 7
+#     LOG_IN_RAND = 8
+#     LOG_IN_RAND_ANSWER = 9
+#     LOG_IN_ACCEPTED = 10
+#     LOG_IN_FAILED = 11
+#     # }
+#
+#     # sign up{
+#     SIGN_UP = 12
+#     SIGN_UP_ANSWER = 13
+#     SIGN_UP_CONFIRMED = 14
+#     SIGN_UP_FAILED = 15
+#     # }
+#
+#     # transactions{
+#     TRANSACTION_COMPLETED = 16
+#     TRANSACTION_OFFERED = 17
+#     GET_ALL_TRANSACTIONS = 18
+#     RECEIVE_ALL_TRANSACTIONS = 19
+#     BLOCK_UPLOADED = 20
+#     # }

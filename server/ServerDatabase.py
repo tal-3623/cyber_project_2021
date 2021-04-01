@@ -11,7 +11,7 @@ from utill.blockchain.Transaction import Transaction
 from utill.blockchain.User import User
 from utill.encription.EncriptionKey import Key
 from utill.network.Message import MessageBetweenNodeAndClient
-from utill.network.MessageType import MessageTypeBetweenNodeAndClient
+from utill.network.MessageType import MessageType
 
 
 class ServerDatabase:
@@ -366,7 +366,7 @@ class ServerDatabase:
 
         # TODO: handle all transactions {
         for transaction in block.list_of_transactions:
-            if len(block.list_of_transactions)>1:
+            if len(block.list_of_transactions) > 1:
                 pass
             self.users_table.make_transaction(transaction)
             node.send_transaction_to_clients_if_needed(transaction)
@@ -391,7 +391,7 @@ class ServerDatabase:
                 if user.as_str() in list_of_new_users_as_str:
                     # send to the client that is waiting for confirmation that his user has been successfully uploaded{
                     client_socket = node.dict_of_clients_and_usernames_waiting_for_confirmation[user]
-                    msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.SIGN_UP_CONFIRMED)
+                    msg = MessageBetweenNodeAndClient(MessageType.SIGN_UP_CONFIRMED)
                     node.dict_of_clients_and_usernames_waiting_for_confirmation.pop(user)  # remove
                     try:
                         msg.send(client_socket)
@@ -574,10 +574,10 @@ class ServerDatabase:
 
                     if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
                         list_to_send.append(
-                            (transaction, MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED.value.__str__()))
+                            (transaction, MessageType.TRANSACTION_COMPLETED.value.__str__()))
                     elif transaction.receiver_username == username and transaction.is_sender_signature_valid(sender.pk):
                         list_to_send.append(
-                            (transaction, MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED.value.__str__()))
+                            (transaction, MessageType.TRANSACTION_OFFERED.value.__str__()))
 
         current_amount_of_money = float(self.users_table.get_balance(username))
 

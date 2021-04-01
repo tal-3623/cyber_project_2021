@@ -1,12 +1,11 @@
 import socket
-from datetime import datetime
 
 from Constants import MSG_SEPARATOR, END_MSG
-from utill.network.MessageType import MessageTypeBetweenNodes, MessageTypeBetweenNodeAndClient
+from utill.network.MessageType import MessageType
 
 
 class MessageBetweenNodes:
-    def __init__(self, message_type: MessageTypeBetweenNodes = None, content: str = None):
+    def __init__(self, message_type: MessageType = None, content: str = None):
         self.message_type = message_type
         self.content = content
 
@@ -22,18 +21,18 @@ class MessageBetweenNodes:
             else:
                 msg += char
         self.message_type, self.content = msg.split(MSG_SEPARATOR)
-        self.message_type = MessageTypeBetweenNodes(int(self.message_type))  # convert to enum
+        self.message_type = MessageType(int(self.message_type))  # convert to enum
 
         print(f'####################\n', self.message_type.name, '\n', self.content, '\n####################')
 
     def send(self, sock: socket.socket):
         string_to_send = f'{self.message_type.value}{MSG_SEPARATOR}{self.content}{END_MSG}'
-        print('sending',self.message_type.name,self.content,string_to_send)
+        print('sending', self.message_type.name, self.content, string_to_send)
         sock.send(string_to_send.encode())
 
 
 class MessageBetweenNodeAndClient:
-    def __init__(self, message_type: MessageTypeBetweenNodeAndClient = None, content: str = ''):
+    def __init__(self, message_type: MessageType = None, content: str = ''):
         self.message_type = message_type
         self.content = content
 
@@ -77,9 +76,9 @@ class MessageBetweenNodeAndClient:
             else:
                 msg += char
         self.message_type, self.content = msg.split(MSG_SEPARATOR)
-        self.message_type = MessageTypeBetweenNodeAndClient(int(self.message_type))  # convert to enum
+        self.message_type = MessageType(int(self.message_type))  # convert to enum
         print('rreerre')
-        print(f'####################\n',self.message_type.name,'\n',self.content,'\n####################')
+        print(f'####################\n', self.message_type.name, '\n', self.content, '\n####################')
 
     def send(self, sock: socket.socket):
         string_to_send = f'{self.message_type.value}{MSG_SEPARATOR}{self.content}{END_MSG}'

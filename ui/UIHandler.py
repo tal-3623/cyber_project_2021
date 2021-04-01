@@ -17,7 +17,7 @@ from client.WalletDatabase import WalletDatabase
 from utill.blockchain.Transaction import Transaction
 from utill.encription.EncriptionKey import Key
 from utill.network.Message import MessageBetweenNodeAndClient
-from utill.network.MessageType import MessageTypeBetweenNodeAndClient
+from utill.network.MessageType import MessageType
 
 Config.set('graphics', 'resizable', False)
 Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
@@ -313,12 +313,14 @@ class WalletApp(App):
             return
         self.my_socket.settimeout(0.1)
         try:
+            print(self.my_socket)
             self.my_socket.connect((ip, int(port)))
-            print('after connect')
-        except socket.timeout or ConnectionError:
-            self.close_socket()
+        except Exception:
+            print('in connect erer')
             PopUp_Invalid_input(f'could not connect to server \nip : {ip}\nport : {port}')
+            self.pressed_back()
             return
+
         if self.connect_screen_from == "sign up":
             self.root.current = "SignUpScreen"
         elif self.connect_screen_from == "log in":
@@ -344,14 +346,14 @@ class WalletApp(App):
             try:
                 msg = MessageBetweenNodeAndClient()
                 msg.recv(self.my_socket)
-                if msg.message_type == MessageTypeBetweenNodeAndClient.SIGN_UP_CONFIRMED:
+                if msg.message_type == MessageType.SIGN_UP_CONFIRMED:
                     # after the user has been processed{
                     pass  # TODO: add the new user to the db
                     self.wallet_database.add_new_user(username, password, private_key, public_key)
                     # TODO: log into into the user
                     # }
                     self.pressed_back()
-                elif msg.message_type == MessageTypeBetweenNodeAndClient.SIGN_UP_FAILED:
+                elif msg.message_type == MessageType.SIGN_UP_FAILED:
                     PopUp_Invalid_input('SIGN_UP_FAILED')
                     self.pressed_back()
 
@@ -428,46 +430,53 @@ class WalletApp(App):
             try:
                 self.my_socket.settimeout(7)
 
-                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_REQUEST, username)
+                msg = MessageBetweenNodeAndClient(MessageType.LOG_IN_REQUEST, username)
                 msg.send(self.my_socket)
 
                 msg = MessageBetweenNodeAndClient()
 
                 msg.recv(self.my_socket)
 
-                if msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_FAILED:
+                if msg.message_type == MessageType.LOG_IN_FAILED:
                     PopUp_Invalid_input('login failed')
                     self.current_user.clear()
                     self.pressed_back()
                     return
-                elif msg.message_type != MessageTypeBetweenNodeAndClient.LOG_IN_RAND:
-                    raise Exception('unxpected msg')
+                elif msg.message_type != MessageType.LOG_IN_RAND:
+                    raise Exception('unxpected msg')  # TODO
 
                 signature = self.current_user.private_key.sign(msg.content)
 
-                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.LOG_IN_RAND_ANSWER, signature)
+                msg = MessageBetweenNodeAndClient(MessageType.LOG_IN_RAND_ANSWER, signature)
                 msg.send(self.my_socket)
 
                 msg = MessageBetweenNodeAndClient()
                 msg.recv(self.my_socket)
 
-                if msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_ACCEPTED:
+                if msg.message_type == MessageType.LOG_IN_ACCEPTED:
                     self.root.current = "UserPageScreen"
                     self.root.ids.UserPageScreen.ids.username_label.text = self.current_user.username
                     # send to server GET_ALL_TRANSACTIONS{
-                    msg_to_send = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.GET_ALL_TRANSACTIONS)
+                    msg_to_send = MessageBetweenNodeAndClient(MessageType.GET_ALL_TRANSACTIONS)
                     msg_to_send.send(self.my_socket)
                     self.my_socket.settimeout(Constants.SOCKET_CLIENT_RECEIVE_SHORT_TIMEOUT)
                     Clock.schedule_interval(self.recv_msg_from_server, 1)
                     # }
-                elif msg.message_type == MessageTypeBetweenNodeAndClient.LOG_IN_FAILED:
+                elif msg.message_type == MessageType.LOG_IN_FAILED:
                     PopUp_Invalid_input('login failed')
                     self.pressed_back()
                 else:
                     raise Exception('nfds')
-            except ConnectionError or socket.timeout:
+            except ConnectionError  :
                 PopUp_Invalid_input(f'connection with server failed')
                 self.pressed_back()
+                print('471')
+                return
+            except socket.timeout:
+                PopUp_Invalid_input(f'connection with server failed')
+                self.pressed_back()
+                print('471')
+                return
             # }
 
     def sign_up(self):
@@ -487,7 +496,7 @@ class WalletApp(App):
                 # send sign up msg{
                 list_of_data = [username, pk.as_str()]
                 content = json.dumps(list_of_data)
-                msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.SIGN_UP, content)
+                msg = MessageBetweenNodeAndClient(MessageType.SIGN_UP, content)
                 try:
                     self.my_socket.settimeout(2)
                     msg.send(self.my_socket)
@@ -512,9 +521,6 @@ class WalletApp(App):
                     break
 
             self.root.current = "WaitingForConfirmationScreen"
-            # TODO: wait to get conformation from server that the user has been processed
-            # TODO: switch to a screen that says waiting for conformation
-
             self.params_for_wait_for_confirmation = ParamsWaitingForConfirmation(username, password, key_private, pk)
 
     def acquire(self):
@@ -549,11 +555,11 @@ class WalletApp(App):
         self.root.ids.UserPageScreen.ids.balance_label.text = str(round(self.current_user.balance, 5))
         # }
 
-    def process_transaction(self, transaction: Transaction, type: MessageTypeBetweenNodeAndClient, change_balance=True):
+    def process_transaction(self, transaction: Transaction, type: MessageType, change_balance=True):
         print(f'processing {transaction.as_str()}')
         print(f'reciver {transaction.receiver_username}')
         print(f'giver {transaction.sender_username}')
-        if type == MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED:
+        if type == MessageType.TRANSACTION_COMPLETED:
             print('tran complete')
             if change_balance:
                 self.update_balance(transaction=transaction)
@@ -563,7 +569,7 @@ class WalletApp(App):
             self.root.ids.UserPageScreen.ids.RecantsTransactions.update_grid(self.list_of_completed_transactions)
             self.root.ids.ReceiveScreen.ids.OfferedTransactions.update_grid(
                 self.dict_of_repr_to_offered_transactions.values(), self.move_to_receive_full_screen)
-        elif type == MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED:
+        elif type == MessageType.TRANSACTION_OFFERED:
             if transaction.as_str() in self.wallet_database.get_list_of_declined_transactions(
                     self.current_user.username):
                 return
@@ -575,27 +581,26 @@ class WalletApp(App):
 
     def recv_msg_from_server(self, *args):
         self.acquire()
-        print(self.current_user.username)
         if self.root.current in ["UserPageScreen", "SendScreen", "FullReceiveScreen",
                                  "ReceiveScreen"]:  # TODO add all needed screens
             try:
                 msg = MessageBetweenNodeAndClient()
                 msg.recv(self.my_socket)
-                if msg.message_type == MessageTypeBetweenNodeAndClient.RECEIVE_ALL_TRANSACTIONS:
+                if msg.message_type == MessageType.RECEIVE_ALL_TRANSACTIONS:
                     list_of_transactions, current_amount_of_money = json.loads(msg.content)
                     print(float(current_amount_of_money), "current_amount_of_money")
                     list_of_transactions = [
-                        (Transaction.create_from_str(tup[0]), MessageTypeBetweenNodeAndClient(int(tup[1]))) for tup in
+                        (Transaction.create_from_str(tup[0]), MessageType(int(tup[1]))) for tup in
                         list_of_transactions]
                     for tup in list_of_transactions:
                         self.process_transaction(tup[0], tup[1], change_balance=False)  # (transaction,msg_type)
                     self.update_balance(amount=float(current_amount_of_money))
-                elif msg.message_type in [MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED,
-                                          MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED]:
+                elif msg.message_type in [MessageType.TRANSACTION_OFFERED,
+                                          MessageType.TRANSACTION_COMPLETED]:
                     tran = Transaction.create_from_str(msg.content)
                     self.process_transaction(tran, msg.message_type)
                     Pop_notifications(Notification.create(msg.message_type), transaction_text=tran.__str__())
-                elif msg.message_type == MessageTypeBetweenNodeAndClient.BLOCK_UPLOADED:
+                elif msg.message_type == MessageType.BLOCK_UPLOADED:
                     amount = float(msg.content)
                     self.update_balance(amount=amount)
 
@@ -647,7 +652,7 @@ class WalletApp(App):
         transaction.sender_signature = signature
 
         try:
-            msg = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_OFFERED, transaction.as_str())
+            msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_OFFERED, transaction.as_str())
             msg.send(self.my_socket)
         except ConnectionError:
             self.back_to_menu()
@@ -666,7 +671,7 @@ class WalletApp(App):
         self.current_transaction.receiver_signature = my_signature
 
         # send transaction with signature to server{
-        msg_to_send = MessageBetweenNodeAndClient(MessageTypeBetweenNodeAndClient.TRANSACTION_COMPLETED,
+        msg_to_send = MessageBetweenNodeAndClient(MessageType.TRANSACTION_COMPLETED,
                                                   self.current_transaction.as_str())
         try:
             msg_to_send.send(self.my_socket)

@@ -1,5 +1,4 @@
 import os
-import string
 from pathlib import Path
 
 # connection {
@@ -45,6 +44,8 @@ MAX_LEN_OF_LIST_OF_TRANSACTIONS = 20
 # GUI{
 RECV_SCREEN_X_LEN = 28
 RECANTS_SCREEN_X_LEN = 22
+
+
 # }
 
 # {
