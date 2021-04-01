@@ -211,7 +211,7 @@ class Node:
                     self.release()
 
 
-        except ConnectionError as e:
+        except ConnectionError or json.decoder.JSONDecodeError as e:
             print(e)
             print('nlafsdfdsfdsfds')
             self.release()

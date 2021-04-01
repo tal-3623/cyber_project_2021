@@ -390,8 +390,8 @@ class ServerDatabase:
         for transaction in block.list_of_transactions:
             if len(block.list_of_transactions) > 1:
                 pass
-            self.users_table.make_transaction(transaction)
-            node.send_transaction_to_clients_if_needed(transaction)
+            self.users_table.make_transaction(transaction,node)
+            # node.send_transaction_to_clients_if_needed(transaction)
         # }
 
         list_of_transactions_as_str = [tran.as_str() for tran in block.list_of_transactions]

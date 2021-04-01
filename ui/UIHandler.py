@@ -467,7 +467,7 @@ class WalletApp(App):
                     self.pressed_back()
                 else:
                     raise Exception('nfds')
-            except ConnectionError  :
+            except ConnectionError:
                 PopUp_Invalid_input(f'connection with server failed')
                 self.pressed_back()
                 print('471')
@@ -638,6 +638,10 @@ class WalletApp(App):
             amount = float(amount)
         except ValueError:
             PopUp_Invalid_input('amount should be a a valid number')
+            return
+
+        if not amount > 0:
+            PopUp_Invalid_input('amount should be positive')
             return
 
         if self.current_user.balance < amount:
