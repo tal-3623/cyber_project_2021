@@ -662,7 +662,7 @@ class WalletApp(App):
 
     def receive_coins(self):
 
-        # update gui{
+        # update gui {
         self.dict_of_repr_to_offered_transactions.pop(self.current_transaction.__str__())
         self.root.ids.ReceiveScreen.ids.OfferedTransactions.update_grid(
             self.dict_of_repr_to_offered_transactions.values(), self.move_to_receive_full_screen)
