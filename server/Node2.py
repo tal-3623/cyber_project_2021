@@ -227,6 +227,10 @@ class Node:
                 sender = self.server_database.users_table.get_user(transaction.sender_username)
                 receiver = self.server_database.users_table.get_user(transaction.receiver_username)
 
+                if sender.balance - transaction.amount < 0:
+                    print('not enough money')
+                    return  # aka not enough money
+
                 if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
                     msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_COMPLETED,
                                                       transaction.as_str())

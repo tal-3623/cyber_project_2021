@@ -270,7 +270,8 @@ class ServerDatabase:
             s = f'''UPDATE {self.table_name} SET Balance = {new_balance} WHERE Username = ? '''
             self.cursor.execute(s, (username,))
 
-        def make_transaction(self, transaction: Transaction):
+        def make_transaction(self, transaction: Transaction,node):
+
             if not self.is_user_exist(transaction.receiver_username) or not self.is_user_exist(
                     transaction.sender_username) or transaction.receiver_username == transaction.sender_username:
                 return  # one of the user does not exist or the receiver_username is also  sender_username
@@ -297,6 +298,27 @@ class ServerDatabase:
             if is_tran_valid:
                 self.update_balance(sender.username, sender.balance - transaction.amount)
                 self.update_balance(receiver.username, receiver.balance + transaction.amount)
+
+            for username in list(node.dict_of_clients_and_usernames.keys()):
+                if transaction.sender_username == username or transaction.receiver_username == username:
+                    if not self.is_user_exist(
+                            transaction.sender_username) or not self.is_user_exist(
+                        transaction.receiver_username):
+                        return  # one of the users does not exist so so nothing
+                    if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
+                        msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_COMPLETED,
+                                                          transaction.as_str())
+                    elif transaction.receiver_username == username and transaction.is_sender_signature_valid(
+                            sender.pk):
+                        print("transaction.receiver_signature",transaction.receiver_signature)
+                        msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_OFFERED,
+                                                          transaction.as_str())
+                    else:
+                        continue
+                    try:
+                        msg.send(node.dict_of_clients_and_usernames[username])
+                    except ConnectionError:
+                        node.dict_of_clients_and_usernames.pop(username)
             # }
 
     def __init__(self, username: str, is_first_node: bool):  # TODO: maybe delete is first node
