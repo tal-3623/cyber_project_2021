@@ -270,29 +270,33 @@ class ServerDatabase:
             s = f'''UPDATE {self.table_name} SET Balance = {new_balance} WHERE Username = ? '''
             self.cursor.execute(s, (username,))
 
-        def make_transaction(self, transaction: Transaction,node):
+        def make_transaction(self, transaction: Transaction, node):
+            is_usernames_valid = self.is_user_exist(transaction.receiver_username) and self.is_user_exist(
+                transaction.sender_username) and transaction.receiver_username != transaction.sender_username
 
-            if not self.is_user_exist(transaction.receiver_username) or not self.is_user_exist(
-                    transaction.sender_username) or transaction.receiver_username == transaction.sender_username:
-                return  # one of the user does not exist or the receiver_username is also  sender_username
+            if is_usernames_valid:
+                sender = self.get_user(transaction.sender_username)
+                receiver = self.get_user(transaction.receiver_username)
 
-            sender = self.get_user(transaction.sender_username)
-            receiver = self.get_user(transaction.receiver_username)
+                print(f'sender: {sender.username} , {sender.pk.as_str()}, {sender.balance}')
+                print(f'receiver: {receiver.username} , {receiver.pk.as_str()}, {receiver.balance}')
 
-            print(f'sender: {sender.username} , {sender.pk.as_str()}, {sender.balance}')
-            print(f'receiver: {receiver.username} , {receiver.pk.as_str()}, {receiver.balance}')
+                # if sender.balance - transaction.amount < 0:
+                #     print('not enough money')
+                #     # TODO: sending transaction failed to client{
+                #     # }
+                #     return  # aka not enough money
 
-            if sender.balance - transaction.amount < 0:
-                print('not enough money')
-                return  # aka not enough money
+                is_enough_money = not (sender.balance - transaction.amount < 0)
 
-            # TODO: check digital signature of both users{
-            sender_pk = sender.pk
-            receiver_pk = receiver.pk
-
-            is_tran_valid = transaction.is_signature_valid(sender_pk, receiver_pk)
-            print(f'is_tran_valid {is_tran_valid}')
-            #  }
+                # TODO: check digital signature of both users{
+                sender_pk = sender.pk
+                receiver_pk = receiver.pk
+                is_signature_valid = transaction.is_signature_valid(sender_pk, receiver_pk)
+                is_tran_valid = is_signature_valid and is_enough_money
+            else:
+                is_tran_valid = False
+                #  }
 
             # changing the users balance{
             if is_tran_valid:
@@ -301,16 +305,24 @@ class ServerDatabase:
 
             for username in list(node.dict_of_clients_and_usernames.keys()):
                 if transaction.sender_username == username or transaction.receiver_username == username:
-                    if not self.is_user_exist(
-                            transaction.sender_username) or not self.is_user_exist(
-                        transaction.receiver_username):
-                        return  # one of the users does not exist so so nothing
+                    if not is_usernames_valid:
+                        msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_FAILED_DUE_TO_INVALID_NAME,
+                                                          transaction.as_str())
+                        msg.send(node.dict_of_clients_and_usernames[username])
+                        return  # one of the users does not exist so do nothing
+
+                    if not is_enough_money:
+                        msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_FAILED_DUE_TO_MONEY,
+                                                          transaction.as_str())
+                        msg.send(node.dict_of_clients_and_usernames[username])
+                        return
+
                     if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
                         msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_COMPLETED,
                                                           transaction.as_str())
                     elif transaction.receiver_username == username and transaction.is_sender_signature_valid(
                             sender.pk):
-                        print("transaction.receiver_signature",transaction.receiver_signature)
+                        print("transaction.receiver_signature", transaction.receiver_signature)
                         msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_OFFERED,
                                                           transaction.as_str())
                     else:
@@ -390,7 +402,7 @@ class ServerDatabase:
         for transaction in block.list_of_transactions:
             if len(block.list_of_transactions) > 1:
                 pass
-            self.users_table.make_transaction(transaction,node)
+            self.users_table.make_transaction(transaction, node)
             # node.send_transaction_to_clients_if_needed(transaction)
         # }
 

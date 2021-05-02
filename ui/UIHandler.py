@@ -267,8 +267,8 @@ def check_if_input_is_empty(*args):
     return '' in args
 
 
-def Pop_notifications(notification: Notification, transaction_text: str = ''):
-    pop = Popup(title='new notification', content=Label(text=notification.value + '\n' + transaction_text),
+def Pop_notifications(notification: Notification, text: str = ''):
+    pop = Popup(title='new notification', content=Label(text=notification.value + '\n' + text),
                 size_hint=(0.5, 0.5),
                 pos_hint={'center_x': 0.5, 'center_y': 0.5})
     pop.open()
@@ -599,16 +599,24 @@ class WalletApp(App):
                                           MessageType.TRANSACTION_COMPLETED]:
                     tran = Transaction.create_from_str(msg.content)
                     self.process_transaction(tran, msg.message_type)
-                    Pop_notifications(Notification.create(msg.message_type), transaction_text=tran.__str__())
+                    Pop_notifications(Notification.create(msg.message_type), text=tran.__str__())
                 elif msg.message_type == MessageType.BLOCK_UPLOADED:
                     amount = float(msg.content)
                     self.update_balance(amount=amount)
+                elif msg.message_type == MessageType.TRANSACTION_FAILED_DUE_TO_MONEY:
+                    tran = Transaction.create_from_str(msg.content)
+                    Pop_notifications(Notification.create(msg.message_type), text=tran.__str__())
+                elif msg.message_type == MessageType.TRANSACTION_FAILED_DUE_TO_INVALID_NAME:
+                    tran = Transaction.create_from_str(msg.content)
+                    Pop_notifications(Notification.create(msg.message_type), text=tran.__str__())
+
 
 
 
             except socket.timeout:
                 self.release()
                 return
+
             except ConnectionError:
                 PopUp_Invalid_input('server dissconected')
                 self.root.current = "MenuScreen"
