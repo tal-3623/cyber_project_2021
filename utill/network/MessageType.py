@@ -35,10 +35,9 @@ class MessageType(Enum):
     RECEIVE_ALL_TRANSACTIONS = 19
     BLOCK_UPLOADED = 20
     TRANSACTION_FAILED_DUE_TO_INVALID_NAME = 21
-    TRANSACTION_FAILED_DUE_TO_MONEY =22
+    TRANSACTION_FAILED_DUE_TO_MONEY = 22
     # }
     # }
-
 
 # class MessageType(Enum):
 #     NewBlock = 0

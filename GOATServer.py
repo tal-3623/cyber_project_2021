@@ -3,19 +3,6 @@ from server.Node2 import Node
 from utill.blockchain.User import User
 from utill.encription.EncriptionKey import Key
 
-username = input('user ? ')
-password = input('password? ')
-port_for_nodes = int(input('port for nodes '))
-port_for_clients = int(input('port for clients '))
-is_first_node = input('is_first_node ').lower() == 't'
-# username = 'tal'
-# password = 'tal123'
-# port_for_nodes = 555
-# port_for_clients = 832
-# is_first_node = True
-if not is_first_node:
-    node_to_connect = (input("ip "), int(input('port ')))
-
 
 def check_if_input_is_empty(*args):
     return '' in args
@@ -26,6 +13,23 @@ def check_username_validity(username: str):
 
 
 def main():
+
+    #------------------------------ {
+    username = input('user ? ')
+    password = input('password? ')
+    try:
+        port_for_nodes = int(input('port for nodes '))
+        port_for_clients = int(input('port for clients '))
+    except ValueError:
+        print('invalid port number')
+        return
+
+    is_first_node = input('is first node ? enter t for true ').lower() == 't'
+
+    if not is_first_node:
+        node_to_connect = (input("ip "), int(input('port ')))
+    #--------------------------------- }
+
     wallet_database = WalletDatabase('wallet')
     if is_first_node:
         if check_if_input_is_empty(username, password):
@@ -46,7 +50,8 @@ def main():
             wallet_database.add_new_user(username, password, private_key, pk)
 
         try:
-            node = Node(User(username, pk), private_key, port_for_nodes=port_for_nodes, port_for_clients=port_for_clients)
+            node = Node(User(username, pk), private_key, port_for_nodes=port_for_nodes,
+                        port_for_clients=port_for_clients)
             node.run()
         except OSError as e:
             print(e)
@@ -62,7 +67,7 @@ def main():
             print('username must be only letters and numbers')
             return
 
-        elif   wallet_database.is_user_exist(username):
+        elif wallet_database.is_user_exist(username):
             if not wallet_database.check_if_password_valid(username, password):
                 print('wrong password')
                 return
@@ -74,7 +79,8 @@ def main():
         pk, private_key = wallet_database.get_keys(username, password)
 
         try:
-            node = Node(User(username, pk), private_key, port_for_nodes=port_for_nodes, port_for_clients=port_for_clients,
+            node = Node(User(username, pk), private_key, port_for_nodes=port_for_nodes,
+                        port_for_clients=port_for_clients,
                         node_to_connect_through=node_to_connect)
             node.run()
         except OSError as e:
