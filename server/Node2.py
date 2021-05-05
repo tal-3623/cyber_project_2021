@@ -210,7 +210,6 @@ class Node:
                 except socket.timeout:
                     self.release()
 
-
         except ConnectionError or json.decoder.JSONDecodeError as e:
             print(e)
             print('nlafsdfdsfdsfds')
@@ -222,7 +221,7 @@ class Node:
             if transaction.sender_username == username or transaction.receiver_username == username:
                 if not self.server_database.users_table.is_user_exist(
                         transaction.sender_username) or not self.server_database.users_table.is_user_exist(
-                    transaction.receiver_username):
+                        transaction.receiver_username):
                     return  # one of the users does not exist so so nothing
                 sender = self.server_database.users_table.get_user(transaction.sender_username)
                 receiver = self.server_database.users_table.get_user(transaction.receiver_username)
@@ -297,7 +296,6 @@ class Node:
             raise Exception(f'got get block msg for a block that i dont have a father')
 
     def handle_new_block(self, content: str, socket: socket.socket):
-        print('296', content)
         new_block_as_tup = json.loads(content)
         new_block = Block.create_block_from_tuple_received(new_block_as_tup)
         add_block_result = self.server_database.add_block(new_block, self)

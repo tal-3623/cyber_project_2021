@@ -348,10 +348,7 @@ class WalletApp(App):
                 msg.recv(self.my_socket)
                 if msg.message_type == MessageType.SIGN_UP_CONFIRMED:
                     # after the user has been processed{
-                    pass  # TODO: add the new user to the db
                     self.wallet_database.add_new_user(username, password, private_key, public_key)
-                    # TODO: log into into the user
-                    # }
                     self.pressed_back()
                 elif msg.message_type == MessageType.SIGN_UP_FAILED:
                     PopUp_Invalid_input('SIGN_UP_FAILED')
