@@ -158,7 +158,6 @@ class Node:
                         elif msg.message_type == MessageType.LOG_IN_REQUEST:
                             username = msg.content
                             if not self.server_database.users_table.is_user_exist(username):
-                                print(f'not user named {username}')
                                 msg = MessageBetweenNodeAndClient(MessageType.LOG_IN_FAILED)
                                 msg.send(client_socket)
 
@@ -187,7 +186,6 @@ class Node:
                         if msg.message_type == MessageType.GET_ALL_TRANSACTIONS:
                             # serch the database for all transactions revolving the user {
                             tuples, current_amount_of_money = self.server_database.get_all_transactions_of(username)
-                            print(f'current_amount_of_money {current_amount_of_money} (190)')
                             content = json.dumps(
                                 [[(t[0].as_str(), t[1]) for t in tuples], str(current_amount_of_money)])
                             msg_to_send = MessageBetweenNodeAndClient(
@@ -212,7 +210,6 @@ class Node:
 
         except ConnectionError or json.decoder.JSONDecodeError as e:
             print(e)
-            print('nlafsdfdsfdsfds')
             self.release()
             return
 
@@ -227,7 +224,6 @@ class Node:
                 receiver = self.server_database.users_table.get_user(transaction.receiver_username)
 
                 if sender.balance - transaction.amount < 0:
-                    print('not enough money')
                     return  # aka not enough money
 
                 if transaction.is_signature_valid(sender.pk, receiver.pk):  # both valid
@@ -299,7 +295,6 @@ class Node:
         new_block_as_tup = json.loads(content)
         new_block = Block.create_block_from_tuple_received(new_block_as_tup)
         add_block_result = self.server_database.add_block(new_block, self)
-        # print(f"add_block_result (in new) {add_block_result.name}")
         if add_block_result == AddBlockStatus.INVALID_BLOCK:
             pass
         elif add_block_result == AddBlockStatus.ORPHAN_BLOCK:
@@ -351,7 +346,7 @@ class Node:
                 self.list_of_nodes_address.remove(address)
                 self.list_of_nodes_sockets.remove(node_socket)
             except ValueError:
-                print('351 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                pass
             self.release()
 
     def find_proof_of_work_and_upload_block(self):
@@ -362,7 +357,6 @@ class Node:
         while True:
 
             target = 2 ** (256 - proof_of_work_difficulty)
-            print(f'frec is {(2 ** proof_of_work_difficulty) // PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY}')
             for nonce in range(MAX_NONCE):
                 if nonce % (2 ** proof_of_work_difficulty) // PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY == 0:  # 2^diff =
                     # average amount of tries before success,PROOF_OF_WORK_CHECK_BLOCK_FREQUENCY is how many times to
@@ -378,7 +372,6 @@ class Node:
                 hash_result = hashlib.sha256(input_to_hash.encode()).hexdigest()
 
                 if int(hash_result, 16) < target:
-                    print(nonce, 'nonce is !!')
                     self.acquire()
                     if block != self.server_database.blockchain_table.block_to_calc_proof_of_work:
                         self.block_to_upload = None
@@ -406,7 +399,6 @@ class Node:
                     self.list_of_new_users_to_upload = self.list_of_new_users_to_upload[
                                                        x:]
 
-                    # print(f'uploading block with {[t.as_str() for t in list_of_transactions_to_make]}')
                     last_block_hash = block.current_block_hash
                     self.block_to_upload = Block(self.username, list_of_transactions_to_make,
                                                  list_of_new_users_to_upload,

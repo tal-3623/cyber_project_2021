@@ -20,4 +20,4 @@ class Notification(Enum):
         elif type == MessageType.TRANSACTION_FAILED_DUE_TO_INVALID_NAME:
             return Notification.TRANSACTION_FAILED_DUE_TO_INVALID_NAME
         else:
-            print('erorr')
+            print('error')

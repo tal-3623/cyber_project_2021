@@ -147,7 +147,6 @@ class ServerDatabase:
                 f'''SELECT * FROM Blockchain WHERE CBH = '{child.last_block_hash}' ''')
             list_of_fathers = self.cursor.fetchall()
             if len(list_of_fathers) != 1:
-                print(f'child_hash {child.current_block_hash} , fatther {child.last_block_hash}')
                 return None
 
             father = list_of_fathers[0]
@@ -190,7 +189,6 @@ class ServerDatabase:
                 if len(max_id_list) != 1:
                     raise Exception("duplicate max id")
                 max_id = max_id_list[0][0]
-                print(f'max id is {max_id}')
                 self.current_block_id = max_id + 1
                 # }
 
@@ -262,8 +260,6 @@ class ServerDatabase:
             try:
                 self.cursor.execute(s, (user.username, user.pk.as_str(), user.balance))  # TODO check
             except sqlite3.IntegrityError as e:
-                print(f'username {user.username},pk {user.pk.as_str()}, balance {user.balance}')
-                print(e)
                 pass
 
         def update_balance(self, username: str, new_balance):
@@ -278,14 +274,8 @@ class ServerDatabase:
                 sender = self.get_user(transaction.sender_username)
                 receiver = self.get_user(transaction.receiver_username)
 
-                print(f'sender: {sender.username} , {sender.pk.as_str()}, {sender.balance}')
-                print(f'receiver: {receiver.username} , {receiver.pk.as_str()}, {receiver.balance}')
 
-                # if sender.balance - transaction.amount < 0:
-                #     print('not enough money')
-                #     # TODO: sending transaction failed to client{
-                #     # }
-                #     return  # aka not enough money
+
 
                 is_enough_money = not (sender.balance - transaction.amount < 0)
 
@@ -322,7 +312,6 @@ class ServerDatabase:
                                                           transaction.as_str())
                     elif transaction.receiver_username == username and transaction.is_sender_signature_valid(
                             sender.pk):
-                        print("transaction.receiver_signature", transaction.receiver_signature)
                         msg = MessageBetweenNodeAndClient(MessageType.TRANSACTION_OFFERED,
                                                           transaction.as_str())
                     else:
@@ -443,7 +432,6 @@ class ServerDatabase:
         """
         # check if block hash match  {
         if block.current_block_hash != block.compute_hash():
-            print('invalid hash')
             return AddBlockStatus.INVALID_BLOCK
         # }
 
@@ -452,7 +440,6 @@ class ServerDatabase:
             f'''SELECT * FROM Blockchain WHERE CBH = '{block.current_block_hash}' ''')
         list_of_blocks_with_same_hash = self.blockchain_table.memory_cursor.fetchall()
         if len(list_of_blocks_with_same_hash) != 0:
-            print(f'dup block: {block.as_str()}')
             return AddBlockStatus.INVALID_BLOCK  # duplicated block
         # }
 

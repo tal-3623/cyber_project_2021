@@ -93,7 +93,6 @@ class Key:
 
     def verify(self, signature: str, message: str):
         if signature == '':
-            print('empty string')
             return False
         signature = json.loads(signature)
         signature, is_successful = self.decrypt(signature)
@@ -101,10 +100,8 @@ class Key:
             return False
         ourHashed = Key.hashFunction(message)
         if signature == ourHashed:
-            print("Verification successful: ", )
             return True
         else:
-            print("Verification failed")
             return False
 
     def sign(self, msg: str) -> str:
@@ -116,40 +113,7 @@ class Key:
         signature = self.encrypt(hashed)
         return json.dumps(signature)
 
-    # TODO delete{
     def set(self, k, n):
         self.__key = k
         self.__n = n
 
-
-def main():
-    # p = int(input("Enter a prime number (17, 19, 23, etc): "))
-    # q = int(input("Enter another prime number (Not one you entered above): "))
-    t = time.time()
-
-    print("Generating your public/private keypairs now . . .")
-    private = Key()
-    public = private.generate_public_key_and_private_key()
-    print(time.time() - t)
-
-    print("Your public key is ", public, " and your private key is ", private)
-    message = input("Enter a message to encrypt with your private key: ")
-    print("")
-
-    print("Encrypting message with private key ", private, " . . .")
-    signature = private.sign(message)
-    print("Your encrypted hashed message is: ")
-
-    print(signature)
-    # print(encrypted_msg)
-
-    print("")
-    print("Decrypting message with public key ", public, " . . .")
-
-    print("")
-    print("Verification process . . .")
-    public.verify(signature, message)
-
-
-if __name__ == '__main__':
-    main()

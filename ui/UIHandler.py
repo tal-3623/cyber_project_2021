@@ -313,10 +313,8 @@ class WalletApp(App):
             return
         self.my_socket.settimeout(0.1)
         try:
-            print(self.my_socket)
             self.my_socket.connect((ip, int(port)))
         except Exception:
-            print('in connect erer')
             PopUp_Invalid_input(f'could not connect to server \nip : {ip}\nport : {port}')
             self.pressed_back()
             return
@@ -467,12 +465,10 @@ class WalletApp(App):
             except ConnectionError:
                 PopUp_Invalid_input(f'connection with server failed')
                 self.pressed_back()
-                print('471')
                 return
             except socket.timeout:
                 PopUp_Invalid_input(f'connection with server failed')
                 self.pressed_back()
-                print('471')
                 return
             # }
 
@@ -534,10 +530,7 @@ class WalletApp(App):
         :return:
         """
 
-        print('before', self.current_user.balance)
-        if transaction:
-            print(transaction.sender_username, transaction.receiver_username,
-                  transaction.amount)
+
         if amount is not None:
             self.current_user.balance += amount
         elif self.current_user.username == transaction.sender_username:
@@ -547,17 +540,13 @@ class WalletApp(App):
         else:
             raise Exception('im not the sender nor the receiver')
 
-        print('after', self.current_user.balance)
         # update gui {
         self.root.ids.UserPageScreen.ids.balance_label.text = str(round(self.current_user.balance, 5))
         # }
 
     def process_transaction(self, transaction: Transaction, type: MessageType, change_balance=True):
-        print(f'processing {transaction.as_str()}')
-        print(f'reciver {transaction.receiver_username}')
-        print(f'giver {transaction.sender_username}')
+
         if type == MessageType.TRANSACTION_COMPLETED:
-            print('tran complete')
             if change_balance:
                 self.update_balance(transaction=transaction)
             self.list_of_completed_transactions.append(transaction)
@@ -585,7 +574,6 @@ class WalletApp(App):
                 msg.recv(self.my_socket)
                 if msg.message_type == MessageType.RECEIVE_ALL_TRANSACTIONS:
                     list_of_transactions, current_amount_of_money = json.loads(msg.content)
-                    print(float(current_amount_of_money), "current_amount_of_money")
                     list_of_transactions = [
                         (Transaction.create_from_str(tup[0]), MessageType(int(tup[1]))) for tup in
                         list_of_transactions]
